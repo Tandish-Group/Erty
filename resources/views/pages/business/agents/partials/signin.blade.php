@@ -16,7 +16,9 @@
                     <div class="text-muted fs-8 mt-2">This agent signs in to {{ config('app.name') }}. Leads and tasks assigned here appear under their My tasks and My agent dashboard.</div>
                 </div>
                 <div class="d-flex gap-2">
-                    @if($login->is_sub_account)@businessCan('subaccount_management', 'view')<a class="btn btn-sm btn-light" href="{{ route('business.team.index') }}">Open in Team &amp; roles</a>@endbusinessCan@endif
+                    @if($login->is_sub_account)
+                        @businessCan('subaccount_management', 'view')<a class="btn btn-sm btn-light" href="{{ route('business.team.index') }}">Open in Team &amp; roles</a>@endbusinessCan
+                    @endif
                     @if($canManageLogin && (int) $login->id !== (int) auth()->id())<button type="button" class="btn btn-sm btn-light-danger" data-signin-action="unlink">Unlink</button>@endif
                 </div>
             </div>

@@ -112,6 +112,7 @@ class TenantPayment extends Model
         'credit' => 'Credit',
         'deposit_release' => 'Deposit applied',
         'refund' => 'Refund',
+        'opening' => 'Brought forward',
     ];
 
     public function getPaymentMethodLabelAttribute(): string

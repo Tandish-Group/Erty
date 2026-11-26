@@ -478,13 +478,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     .then(json => {
                         btn.removeAttribute("data-kt-indicator");
                         if (json.status === 200) {
+                            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                            const failed = (json.result && json.result.failed) || 0;
                             Swal.fire({
-                                icon: 'success',
-                                title: 'Import Successful!',
+                                icon: failed ? 'warning' : 'success',
+                                title: failed ? 'Partly imported' : 'Imported',
                                 html: `
                                     <div class="text-start">
-                                        <p><strong>${json.message || 'Bulk action completed.'}</strong></p>
-                                        <p class="text-muted">The ${type} data has been successfully imported into the system.</p>
+                                        <p><strong>${esc(json.message || 'Bulk action completed.')}</strong></p>
+                                        ${failed ? '<p class="text-muted">Rows that were not imported stay on this page with the reason.</p>' : ''}
                                     </div>
                                 `,
                                 confirmButtonText: 'Continue',
@@ -503,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 html: `
                                     <div class="text-start">
                                         <p><strong>The import operation failed.</strong></p>
-                                        <p class="text-danger">${json.message || 'Bulk action failed.'}</p>
+                                        <p class="text-danger">${String(json.message || 'Bulk action failed.').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</p>
                                         <p class="text-muted">Please check the data and try again.</p>
                                     </div>
                                 `,

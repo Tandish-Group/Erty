@@ -90,8 +90,8 @@
                                                  style="transition: background .15s;">
                                                 <i class="fas fa-cloud-upload-alt fs-2x text-primary mb-1"></i>
                                                 <p class="text-muted mb-0 fs-7">Drag &amp; drop, or <span class="text-primary fw-bold">browse</span></p>
-                                                <p class="text-muted fs-8 mb-0">CSV or XLSX — max 10 MB</p>
-                                                <input type="file" name="data_file" id="data_file" accept=".csv,.xlsx" style="display:none" required />
+                                                <p class="text-muted fs-8 mb-0">CSV, max 10 MB (in Excel: File → Save as → CSV)</p>
+                                                <input type="file" name="data_file" id="data_file" accept=".csv,text/csv" style="display:none" required />
                                             </div>
                                             <div id="bulk-upload-file-info" class="mt-2"></div>
                                         </div>

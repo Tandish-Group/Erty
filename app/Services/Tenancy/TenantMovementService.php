@@ -293,6 +293,17 @@ class TenantMovementService
         ];
     }
 
+    /** A tenancy's payment frequency as tenant_leases stores it (monthly, quarterly, semi-annually, annually). */
+    public static function leaseFrequency(?string $frequency): string
+    {
+        return match (TenantChargesService::monthsPerPeriod($frequency)) {
+            3 => 'quarterly',
+            6 => 'semi-annually',
+            12 => 'annually',
+            default => 'monthly',
+        };
+    }
+
     // ─── Execute Movement ──────────────────────────────────────────────────
 
     /**
@@ -418,6 +429,10 @@ class TenantMovementService
                     'billing_start_date'    => $nextPeriodStart->toDateString(),
                     'status'                => 'Active',
                     'special_terms'         => $leaseData['special_terms'] ?? null,
+                    // What changed with the move (the transfer form), otherwise as before.
+                    'furnishing'            => $movement->new_unit_type === 'residential' ? ($leaseData['furnishing'] ?? $oldTenancy->furnishing) : null,
+                    'number_of_occupants'   => $leaseData['number_of_occupants'] ?? $oldTenancy->number_of_occupants,
+                    'rate_per_sq_ft'        => $movement->new_unit_type === 'commercial' ? ($leaseData['rate_per_sq_ft'] ?? $oldTenancy->rate_per_sq_ft) : null,
                     'created_by'            => $actor,
                     'updated_by'            => $actor,
                 ]
@@ -434,11 +449,12 @@ class TenantMovementService
                 'rent_amount'                   => $movement->new_rent,
                 'security_deposit'              => $movement->new_deposit,
                 'currency'                      => $movement->currency,
-                'payment_frequency'             => strtolower((string) ($leaseData['payment_frequency'] ?? $oldTenancy->payment_frequency ?? 'monthly')),
-                'payment_day_of_month'          => $leaseData['payment_day_of_month'] ?? 1,
+                // Billing continues on the tenancy's own cycle, so the lease records the same frequency and due day.
+                'payment_frequency'             => self::leaseFrequency($oldTenancy->payment_frequency),
+                'payment_day_of_month'          => $oldTenancy->payment_due_day ?: 1,
                 'late_fee_amount'               => $leaseData['late_fee_amount'] ?? $oldTenancy->late_fee_amount ?? 0,
                 'grace_period_days'             => $leaseData['grace_period_days'] ?? $oldTenancy->grace_period_days ?? 0,
-                'lease_type'                    => $leaseData['lease_type'] ?? (empty($leaseData['lease_end_date']) ? 'month-to-month' : 'fixed-term'),
+                'lease_type'                    => empty($leaseData['lease_end_date']) ? 'month-to-month' : 'fixed-term',
                 'status'                        => 'active',
                 'special_terms'                 => $leaseData['special_terms'] ?? null,
             ]);

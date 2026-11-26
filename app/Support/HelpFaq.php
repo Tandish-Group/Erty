@@ -93,8 +93,10 @@ class HelpFaq
                             . '<li><strong>Legal</strong>: lease agreements and other documents, in folders.</li></ul>'
                             . '<p>You only see the parts your role gives you access to. Your profile, Business settings and Team &amp; roles are in the menu under your picture at the bottom of the sidebar.</p>'],
                     ['id' => 'start-import', 'q' => 'Can I bring in properties and tenants I already manage?',
-                        'a' => 'Yes. <strong>Property portfolio</strong> has <strong>Import properties</strong>, and <strong>Tenants</strong> has <strong>Import data</strong>. '
-                            . 'Upload a spreadsheet and confirm how its columns match before the records are created.'],
+                        'a' => 'Yes. <strong>Property portfolio</strong> has <strong>Import properties</strong>, and <strong>Tenants</strong> has <strong>Import data</strong> for tenants with their tenancies, payments received and notices already given. '
+                            . 'Download the example file for the kind of data, fill in one row per tenancy (or payment, or notice), save it as CSV and upload it. '
+                            . 'Then open <strong>Review imports</strong>: every row is checked the way it will be imported, rows with a problem say what to fix, and nothing is created until you import the rows you select. '
+                            . 'For a tenancy that started before Erty, give the deposit you hold and what the tenant owes today: past rent periods are not billed again, the amount owed becomes one opening invoice (or credit), and billing continues from the next period. Imported tenants are not e-mailed.'],
                 ],
             ],
             [
@@ -147,8 +149,12 @@ class HelpFaq
                     ['id' => 'tenants-give-notice', 'q' => 'How do notices work?',
                         'a' => 'On the tenancy, choose <strong>Give notice</strong> and enter the move-out date. The tenancy shows as <strong>On Notice</strong> until then; notices are listed on its <strong>Notices</strong> tab.'],
                     ['id' => 'tenants-transfer', 'q' => 'How do I move a tenant to another unit?',
-                        'a' => 'On the tenancy, choose <strong>Move / transfer</strong> and pick the new unit and moving date; the preview shows any change in rent and deposit. Once approved, on the moving date the current tenancy is marked <strong>Transferred</strong> and a new tenancy and lease start in the new unit. '
-                            . 'Every move is tracked under <strong>Unit transfers</strong>.'],
+                        'a' => 'Under <strong>Unit transfers</strong> (or <strong>Move / transfer</strong> on the tenancy), choose the tenancy, a free unit in the same property and when the tenant moves: '
+                            . 'at the start of the next billing period, or on a chosen date, when the unused days of the old rent are set against the new rent. '
+                            . 'The summary shows the new rent, any rent adjustment and the deposit change before you request it. '
+                            . 'The request then waits for approval. Approving a move dated today carries it out at once; a later move is carried out by the nightly billing run on its date. '
+                            . 'The old tenancy is marked <strong>Transferred</strong> and a new tenancy and lease start in the new unit, keeping the account, agent and billing cycle. '
+                            . 'Requesting, approving and cancelling need the Tenants → Transfers right.'],
                     ['id' => 'tenants-end', 'q' => 'What happens when a tenancy ends?',
                         'a' => 'Choose <strong>End tenancy</strong>, the leaving date and the reason. The tenant\'s account is settled for that date: rent for periods starting after they leave is cancelled, damages are charged, '
                             . 'the deposit pays what is still owed, and the rest of the deposit and any prepaid rent is shown as owed back to the tenant. The unit becomes vacant again.'],
@@ -166,6 +172,12 @@ class HelpFaq
                     ['id' => 'rent-reconciliation', 'q' => 'What is POP reconciliation?',
                         'a' => 'It attaches proof of payment to the payments you recorded. Open <strong>Tenants</strong> → <strong>POP reconciliation</strong>, upload the receipts, pick a receipt, pick the payment it belongs to, then match them. '
                             . 'Payments still without proof are listed, newest first.'],
+                    ['id' => 'rent-import', 'q' => 'Can I record many payments at once from a file?',
+                        'a' => 'Yes. On <strong>Payment reconciliation</strong> (or <strong>Tenants</strong> → <strong>Import data</strong> → Tenant payments), download the example file. '
+                            . 'Fill in one row per payment: the tenancy reference (or the tenant reference or e-mail), the date, the amount and the method (cash, bank_transfer, mobile_money, check, card or other), '
+                            . 'and the transaction reference so the same payment is never imported twice. Delete the example rows, then upload the file. '
+                            . 'Each payment settles the tenant\'s oldest unpaid invoice first and anything extra stays as credit; put an invoice number in <strong>invoice_number</strong> only to pay that invoice first, '
+                            . 'and <code>no</code> in <strong>cleared</strong> for a cheque or transfer that has not cleared. Before anything is recorded you review each row: rows with a problem (unknown tenancy, a date in the future, a reference already recorded) say why and are not imported.'],
                     ['id' => 'rent-statement', 'q' => 'How do I give a tenant a statement?',
                         'a' => 'Open the tenancy and download its <strong>Statement (PDF)</strong>: every bill, payment and credit on the tenant\'s account, with the balance.'],
                 ],

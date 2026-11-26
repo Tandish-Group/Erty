@@ -517,7 +517,8 @@ class TenantAccountService
         if ($firstInvoiceId) {
             $open = $open->sortBy(fn (TenantInvoice $i) => $i->id === $firstInvoiceId ? 0 : 1, SORT_NUMERIC, false)->values();
         }
-        $source = match ($entry->entry_type) { 'credit' => 'credit', 'deposit_release' => 'deposit', default => 'payment' };
+        // "opening" = money already held when the tenancy was imported (no commission: it was not collected in Erty).
+        $source = match ($entry->entry_type) { 'credit' => 'credit', 'deposit_release' => 'deposit', 'opening' => 'opening', default => 'payment' };
         $first = null;
         foreach ($open as $invoice) {
             if ($remaining <= 0) {

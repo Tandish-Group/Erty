@@ -131,17 +131,12 @@ Route::group(['prefix' => 'tenant_management'], function () {
 
     // Tenant Movement Routes
     Route::prefix('movement')->group(function () {
-
-        Route::get('/',                                   [TenantMovementController::class, 'index']);
-        Route::get('/create',                             [TenantMovementController::class, 'create']);
-        Route::get('/list',                               [TenantMovementController::class, 'list']);
-        Route::get('/vacant-units',                       [TenantMovementController::class, 'getVacantUnits']);
-        Route::get('/parking-slots',                      [TenantMovementController::class, 'getParkingSlots']);
-        Route::post('/preview',                           [TenantMovementController::class, 'preview']);
-        Route::post('/initiate',                          [TenantMovementController::class, 'initiate']);
-        Route::get('/tenant/{tenantId}/active-tenancy',   [TenantMovementController::class, 'getActiveTenancyForTenant']);
-        Route::post('/{ref}/approve',                     [TenantMovementController::class, 'approve']);
-        Route::post('/{ref}/cancel',                      [TenantMovementController::class, 'cancel']);
-        Route::get('/{ref}',                              [TenantMovementController::class, 'show']);
+        Route::get('/', [TenantMovementController::class, 'index'])->name('tenant_movement.index');
+        Route::get('/create', [TenantMovementController::class, 'create'])->name('tenant_movement.create');
+        Route::post('/preview', [TenantMovementController::class, 'preview'])->name('tenant_movement.preview');
+        Route::post('/initiate', [TenantMovementController::class, 'initiate'])->name('tenant_movement.store');
+        Route::post('/{ref}/approve', [TenantMovementController::class, 'approve'])->name('tenant_movement.approve');
+        Route::post('/{ref}/cancel', [TenantMovementController::class, 'cancel'])->name('tenant_movement.cancel');
+        Route::get('/{ref}', [TenantMovementController::class, 'show'])->name('tenant_movement.show');
     });
 });

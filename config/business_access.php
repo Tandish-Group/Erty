@@ -224,7 +224,6 @@ return [
         // The bulk-upload review screens show every staged row of the business: import rights only.
         'Business\Tenancies\TenantNoticeController@getTerminationNotices' => 'tenant_management.view',
         'Business\Tenancies\TenantMovementController@index' => 'tenant_management.view',
-        'Business\Tenancies\TenantMovementController@list' => 'tenant_management.view',
         'Business\Tenancies\TenantMovementController@show' => 'tenant_management.view',
         'Business\Agents\AgentCommissionController@export' => 'agent_management.view',
         'Business\Agents\AgentCommissionController@saveAgreement' => 'agent_management.edit',

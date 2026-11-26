@@ -18,7 +18,7 @@ class PaymentReconciliationController extends Controller
     {
         $userId = business_owner_id();
 
-        $unmatchedPaymentsCount = TenantPayment::whereNull('receipt_path')
+        $unmatchedPaymentsCount = TenantPayment::whereNull('receipt_path')->where('entry_type', 'payment')->where('payment_status', '!=', TenantPayment::REVERSED)
             ->whereHas('tenant', fn($q) => $q->where('managed_by', $userId))
             ->count();
 
@@ -56,7 +56,7 @@ class PaymentReconciliationController extends Controller
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $query = TenantPayment::whereNull('receipt_path')
+        $query = TenantPayment::whereNull('receipt_path')->where('entry_type', 'payment')->where('payment_status', '!=', TenantPayment::REVERSED)
             ->whereHas('tenant', fn ($q) => $q->where('managed_by', business_owner_id()))
             ->with(['tenant.tenantProfile', 'invoice']);
 
@@ -191,7 +191,7 @@ class PaymentReconciliationController extends Controller
             return response()->json(['message' => 'Staged receipt not found or already matched.'], 404);
         }
 
-        $payment = TenantPayment::whereNull('receipt_path')
+        $payment = TenantPayment::whereNull('receipt_path')->where('entry_type', 'payment')->where('payment_status', '!=', TenantPayment::REVERSED)
             ->whereHas('tenant', fn($q) => $q->where('managed_by', $userId))
             ->find($request->payment_id);
 

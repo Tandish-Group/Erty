@@ -2063,6 +2063,11 @@ class BulkUploadManager {
             this.updateUploadTypeInstructions();
             this.updateTemplateDownloadLink();
         });
+        // A link such as /tenant_management?import=payments chose the kind of file.
+        if (window.ertyPresetImport) {
+            $('#upload_type').val(window.ertyPresetImport).trigger('change');
+            window.ertyPresetImport = null;
+        }
     
         // File upload change
         $('#data_file').on('change', (e) => {
@@ -2232,13 +2237,12 @@ class BulkUploadManager {
                 <div class="alert alert-info d-flex align-items-start p-3 mb-4">
                     <i class="fas fa-users fs-2x text-info me-3 mt-1"></i>
                     <div class="d-flex flex-column">
-                        <h6 class="mb-1">Tenant Profile Upload</h6>
+                        <h6 class="mb-1">Tenants and their tenancies</h6>
                         <small class="text-muted">
-                            <strong>Required:</strong> tenant_type<br>
-                            <strong>Individual:</strong> tenant_name, tenant_email, tenant_phone, tenant_id_number<br>
-                            <strong>Business:</strong> business_name, business_email, business_phone, business_registration, business_contact_person
+                            One row per tenancy that already exists. <strong>Tenant:</strong> tenant_type (Individual or Business) with name, e-mail, phone and ID number (or the business name, registration, contact person, e-mail and phone). An existing tenant with the same e-mail or ID number is used.<br>
+                            <strong>Tenancy:</strong> property (its name in Erty), unit_number, monthly_rent, payment_frequency (Monthly, Quarterly or Annually), start_date; for a commercial space also occupied_sq_area.<br>
+                            <strong>Money:</strong> deposit and deposit_held, and balance_owed today (negative when in credit). Past periods are not billed again: billing continues from the next period. Imported tenants are not e-mailed.
                         </small>
-                        <small class="mt-2"><strong>Tenant Types:</strong> <code>Individual</code> or <code>Business</code></small>
                     </div>
                 </div>
             `,
@@ -2246,22 +2250,23 @@ class BulkUploadManager {
                 <div class="alert alert-success d-flex align-items-start p-3 mb-4">
                     <i class="fas fa-credit-card fs-2x text-success me-3 mt-1"></i>
                     <div class="d-flex flex-column">
-                        <h6 class="mb-1">Payment Records Upload</h6>
+                        <h6 class="mb-1">Payments received</h6>
                         <small class="text-muted">
-                            <strong>Required:</strong> invoice_id, payment_date, amount_paid, payment_method, payment_status<br>
-                            <strong>Tenant identifier:</strong> tenancy_ref (preferred), tenant_profile_ref, or tenant_email<br>
-                            <strong>Invoice ID format:</strong> as shown on the invoice, e.g. <code>LEASE-20240105-A3F2B1</code> (see Tenancy Billings page)
+                            One row per payment. <strong>Required:</strong> payment_date (YYYY-MM-DD), amount, payment_method, and the tenant: tenancy_ref (best), tenant_profile_ref or tenant_email.<br>
+                            <strong>Methods:</strong> cash, bank_transfer, mobile_money, check, card, other.<br>
+                            Each payment settles the tenant's oldest unpaid invoice first and anything extra stays as credit. Fill in <strong>invoice_number</strong> only to pay a particular invoice first, and set <strong>cleared</strong> to <code>no</code> for a cheque or transfer that has not cleared yet.
                         </small>
-                        <small class="mt-2 text-info"><i class="fas fa-link me-1"></i>Attach receipt files separately via <strong>Receipt Reconciliation</strong> after uploading.</small>
+                        <small class="mt-2 text-info"><i class="fas fa-link me-1"></i>Attach receipt files afterwards under <strong>Payment reconciliation</strong>.</small>
                     </div>
                 </div>
             `,
             'notices': `
                 <div class="alert alert-warning d-flex align-items-start p-3 mb-4">
-                    <i class="fas fa-exclamation-triangle fs-2x text-warning me-3 mt-1"></i>
+                    <i class="fas fa-file-signature fs-2x text-warning me-3 mt-1"></i>
                     <div class="d-flex flex-column">
-                        <h6 class="mb-1">Notice Records Upload</h6>
-                        <small class="text-muted"><strong>Required:</strong> tenant_ref, notice_type, notice_date, effective_date</small>
+                        <h6 class="mb-1">Notices already given</h6>
+                        <small class="text-muted">One row per notice given outside Erty, kept on the tenancy for the record (not sent again). <strong>Required:</strong> the tenant (tenancy_ref, tenant_profile_ref or tenant_email), notice_type, notice_date and effective_date.<br>
+                        <strong>Types:</strong> lease_termination, rent_increase, lease_violation, property_inspection, maintenance_notice, eviction_notice, lease_renewal, other.</small>
                     </div>
                 </div>
             `
@@ -2297,8 +2302,10 @@ class BulkUploadManager {
         if (!file) return;
 
         const fileType = file.name.split('.').pop().toLowerCase();
-        if (!['csv', 'xlsx', 'xls'].includes(fileType)) {
-            this.showError('Please select a CSV or Excel file.');
+        if (fileType !== 'csv') {
+            this.showError(['xlsx', 'xls'].includes(fileType)
+                ? 'Save the spreadsheet as CSV first (in Excel: File → Save as → CSV), then upload the CSV file.'
+                : 'Please choose a CSV file.');
             return;
         }
 
@@ -2369,7 +2376,7 @@ class BulkUploadManager {
                 }
 
                 // Extract headers
-                this.csvHeaders = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+                this.csvHeaders = lines[0].replace(/^\uFEFF/, '').split(',').map(header => header.trim().replace(/"/g, ''));
                 
                 // Extract sample data (first 5 rows)
                 const sampleData = lines.slice(1, 6).map(line => 
@@ -2505,255 +2512,55 @@ class BulkUploadManager {
     getRequiredFields(uploadType) {
         const fieldsMap = {
             'tenants': {
-                // Tenant Type & Selection
-                'tenant_type': { 
-                    label: 'Tenant Type', 
-                    required: true, 
-                    description: 'Individual or Business' 
-                },
-                
-                // Individual Tenant Fields (Required when tenant_type = Individual and use_existing_tenant = false)
-                'tenant_name': { 
-                    label: 'Tenant Name (for Individual)', 
-                    required: false, 
-                    description: 'Full name for individual tenants - required for new individual tenants' 
-                },
-                'tenant_email': { 
-                    label: 'Tenant Email (for Individual)', 
-                    required: false, 
-                    description: 'Email for individual tenants - required for new individual tenants' 
-                },
-                'tenant_phone': { 
-                    label: 'Tenant Phone (for Individual)', 
-                    required: false, 
-                    description: 'Phone for individual tenants - required for new individual tenants' 
-                },
-                'tenant_id_number': { 
-                    label: 'ID Number (for Individual)', 
-                    required: false, 
-                    description: 'ID or passport number - required for new individual tenants' 
-                },
-                'date_of_birth': { 
-                    label: 'Date of Birth', 
-                    required: false, 
-                    description: 'YYYY-MM-DD format' 
-                },
-                'gender': { 
-                    label: 'Gender', 
-                    required: false, 
-                    description: 'Male, Female, Other' 
-                },
-                'address': { 
-                    label: 'Address', 
-                    required: false, 
-                    description: 'Personal address for individual tenants' 
-                },
-                'nationality': { 
-                    label: 'Nationality', 
-                    required: false, 
-                    description: 'Tenant nationality' 
-                },
-                'occupation': { 
-                    label: 'Occupation', 
-                    required: false, 
-                    description: 'Tenant occupation' 
-                },
-                'employer': { 
-                    label: 'Employer', 
-                    required: false, 
-                    description: 'Current employer' 
-                },
-                'monthly_income': { 
-                    label: 'Monthly Income', 
-                    required: false, 
-                    description: 'Monthly income amount' 
-                },
-                
-                // Business Tenant Fields (Required when tenant_type = Business and use_existing_tenant = false)
-                'business_name': { 
-                    label: 'Business Name', 
-                    required: false, 
-                    description: 'Business name - required for new business tenants' 
-                },
-                'business_registration': { 
-                    label: 'Business Registration', 
-                    required: false, 
-                    description: 'Business registration number - required for new business tenants' 
-                },
-                'business_contact_person': { 
-                    label: 'Business Contact Person', 
-                    required: false, 
-                    description: 'Business contact person - required for new business tenants' 
-                },
-                'business_email': { 
-                    label: 'Business Email', 
-                    required: false, 
-                    description: 'Business email address - required for new business tenants' 
-                },
-                'business_phone': { 
-                    label: 'Business Phone', 
-                    required: false, 
-                    description: 'Business phone number - required for new business tenants' 
-                },
-                'business_address': { 
-                    label: 'Business Address', 
-                    required: false, 
-                    description: 'Business address' 
-                },
-                'business_type': { 
-                    label: 'Business Type', 
-                    required: false, 
-                    description: 'Type of business' 
-                },
-                'tax_id_number': { 
-                    label: 'Tax ID Number', 
-                    required: false, 
-                    description: 'Business tax ID' 
-                },
-                'annual_revenue': { 
-                    label: 'Annual Revenue', 
-                    required: false, 
-                    description: 'Business annual revenue' 
-                },
-                'years_in_business': { 
-                    label: 'Years in Business', 
-                    required: false, 
-                    description: 'How long business has been operating' 
-                },
-                
-                // Emergency Contact (Optional for both types)
-                'emergency_contact_name': { 
-                    label: 'Emergency Contact Name', 
-                    required: false, 
-                    description: 'Emergency contact full name' 
-                },
-                'emergency_contact_phone': { 
-                    label: 'Emergency Contact Phone', 
-                    required: false, 
-                    description: 'Emergency contact phone number' 
-                },
-                'emergency_contact_relationship': { 
-                    label: 'Emergency Contact Relationship', 
-                    required: false, 
-                    description: 'Relationship to tenant' 
-                },
-                'emergency_contact_address': { 
-                    label: 'Emergency Contact Address', 
-                    required: false, 
-                    description: 'Emergency contact address' 
-                },
-                
-                // Profile Status and Notes
-                'profile_status': { 
-                    label: 'Profile Status', 
-                    required: false, 
-                    description: 'Active, Inactive, Blacklisted' 
-                },
-                'profile_notes': { 
-                    label: 'Profile Notes', 
-                    required: false, 
-                    description: 'Additional notes about tenant profile' 
-                }
+                'tenant_type': { label: 'Tenant type', required: false, description: 'Individual or Business (Individual if empty)' },
+                'tenant_name': { label: 'Tenant name', required: false, description: 'Individual tenant: full name' },
+                'tenant_email': { label: 'Tenant e-mail', required: false, description: 'Individual tenant' },
+                'tenant_phone': { label: 'Tenant phone', required: false, description: 'Individual tenant' },
+                'tenant_id_number': { label: 'ID or passport number', required: false, description: 'Individual tenant' },
+                'business_name': { label: 'Business name', required: false, description: 'Business tenant' },
+                'business_registration': { label: 'Registration number', required: false, description: 'Business tenant' },
+                'business_contact_person': { label: 'Contact person', required: false, description: 'Business tenant' },
+                'business_email': { label: 'Business e-mail', required: false, description: 'Business tenant' },
+                'business_phone': { label: 'Business phone', required: false, description: 'Business tenant' },
+                'property': { label: 'Property', required: true, description: 'The property name as it is in Erty' },
+                'unit_number': { label: 'Unit', required: true, description: 'Unit number, e.g. A-101' },
+                'occupied_sq_area': { label: 'Area taken (sq ft)', required: false, description: 'Commercial spaces only' },
+                'monthly_rent': { label: 'Rent a month', required: true, description: 'Numbers only' },
+                'payment_frequency': { label: 'Billed', required: false, description: 'Monthly (default), Quarterly or Annually' },
+                'start_date': { label: 'Start date', required: true, description: 'When the tenancy started (YYYY-MM-DD or DD/MM/YYYY)' },
+                'end_date': { label: 'End date', required: false, description: 'Lease end; empty for month-to-month' },
+                'deposit': { label: 'Deposit', required: false, description: 'Deposit agreed' },
+                'deposit_held': { label: 'Deposit held', required: false, description: 'Deposit you hold today (defaults to the deposit)' },
+                'balance_owed': { label: 'Balance owed today', required: false, description: 'What the tenant owes now; negative when in credit' },
+                'currency': { label: 'Currency', required: false, description: 'e.g. KES (defaults to your currency)' },
+                'service_charge_per_sq_ft': { label: 'Service charge per sq ft', required: false, description: 'Commercial spaces only' },
+                'emergency_contact_name': { label: 'Emergency contact', required: false, description: 'Name' },
+                'emergency_contact_phone': { label: 'Emergency contact phone', required: false, description: 'Phone' },
+                'notes': { label: 'Notes', required: false, description: 'Kept on the tenancy' }
             },
             'payments': {
-                'tenancy_ref': { 
-                    label: 'Tenancy Reference', 
-                    required: false, 
-                    description: 'Tenancy reference number (TM12345678) - preferred for payment identification' 
-                },
-                'tenant_profile_ref': { 
-                    label: 'Tenant Profile Reference', 
-                    required: false, 
-                    description: 'Tenant profile reference (TP12345678) - alternative identifier' 
-                },
-                'tenant_email': { 
-                    label: 'Tenant Email', 
-                    required: false, 
-                    description: 'Tenant email address - alternative identifier' 
-                },
-                'invoice_id': { 
-                    label: 'Invoice ID', 
-                    required: true, 
-                    description: 'Invoice number as shown on the invoice (e.g. LEASE-20240105-A3F2B1)' 
-                },
-                'payment_date': { 
-                    label: 'Payment Date', 
-                    required: true, 
-                    description: 'Date payment was made (YYYY-MM-DD)' 
-                },
-                'amount_paid': { 
-                    label: 'Amount Paid', 
-                    required: true, 
-                    description: 'Total amount being paid' 
-                },
-                'payment_method': { 
-                    label: 'Payment Method', 
-                    required: true, 
-                    description: 'cash, bank_transfer, mobile_money, check, card, other' 
-                },
-                'payment_status': { 
-                    label: 'Payment Status', 
-                    required: true, 
-                    description: 'paid, partial, pending, failed' 
-                },
-                'transaction_reference': { 
-                    label: 'Transaction Reference', 
-                    required: false, 
-                    description: 'M-Pesa code, check number, bank reference, etc.' 
-                },
-                'late_fee': { 
-                    label: 'Late Fee', 
-                    required: false, 
-                    description: 'Late fee amount if applicable' 
-                },
-                'late_fee_paid_now': { 
-                    label: 'Late Fee Paid Now', 
-                    required: false, 
-                    description: 'true/false - whether late fee is paid with this payment' 
-                },
-                'payment_notes': { 
-                    label: 'Payment Notes', 
-                    required: false, 
-                    description: 'Additional notes about the payment' 
-                },
-                'single_invoice_amount': { 
-                    label: 'Single Invoice Amount', 
-                    required: false, 
-                    description: 'Amount for single invoice partial payment' 
-                },
-                'lease_amount': { 
-                    label: 'Lease Amount', 
-                    required: false, 
-                    description: 'Amount allocated to tenancy/lease for combined invoices' 
-                },
-                'service_charge_amount': { 
-                    label: 'Service Charge Amount', 
-                    required: false, 
-                    description: 'Amount allocated to service charges for combined invoices' 
-                }
+                'tenancy_ref': { label: 'Tenancy reference', required: false, description: 'e.g. TM3NTAVFLO (best way to find the tenant)' },
+                'tenant_profile_ref': { label: 'Tenant reference', required: false, description: 'e.g. TPAXX69DOR, if you have no tenancy reference' },
+                'tenant_email': { label: 'Tenant e-mail', required: false, description: 'If you have neither reference' },
+                'payment_date': { label: 'Payment date', required: true, description: 'Date the money was received (YYYY-MM-DD)' },
+                'amount_paid': { label: 'Amount', required: true, description: 'Amount received, numbers only' },
+                'payment_method': { label: 'Payment method', required: true, description: 'cash, bank_transfer, mobile_money, check, card or other' },
+                'transaction_reference': { label: 'Transaction reference', required: false, description: 'M-Pesa code, bank or cheque reference: stops the same payment being imported twice' },
+                'invoice_id': { label: 'Invoice to pay first', required: false, description: 'Optional invoice number; otherwise the oldest unpaid invoice is paid first' },
+                'cleared': { label: 'Cleared', required: false, description: 'yes (default) or no for a payment still waiting to clear' },
+                'payment_notes': { label: 'Notes', required: false, description: 'Anything to keep with the payment' }
             },
             'notices': {
-                'tenancy_ref': { label: 'Tenant Residency Reference', required: true, description: 'Tenant residency reference number (TP123456)' },
-                'tenant_profile_ref': { label: 'Tenant Profile Reference', required: true, description: 'Tenant profile reference number (TP123456)' },
-                'tenant_email': { label: 'Tenant Email', required: false, description: 'Tenant email address - optional but recommended' },
-                'notice_type': { label: 'Notice Type', required: true, description: 'lease_termination, rent_increase, etc.' },
-                'notice_date': { label: 'Notice Date', required: true, description: 'Date notice is given (YYYY-MM-DD)' },
-                'effective_date': { label: 'Effective Date', required: true, description: 'Date notice takes effect (YYYY-MM-DD)' },
-                'notice_subject': { label: 'Subject', required: true, description: 'Notice subject/title' },
-                'notice_details': { label: 'Notice Details', required: true, description: 'Detailed notice content' },
-                'notice_period': { label: 'Notice Period (Days)', required: false, description: 'Notice period in days' },
-                'delivery_method': { label: 'Delivery Method', required: false, description: 'email, sms, physical (comma-separated)' },
-                'priority_level': { label: 'Priority Level', required: false, description: 'Priority of the notice (e.g. High, Medium, Low)' },
-                'response_required': { label: 'Response Required', required: false, description: 'Is a response required? true/false' },
-                'response_deadline': { label: 'Response Deadline', required: false, description: 'Deadline for response (YYYY-MM-DD)' },
-                'follow_up_required': { label: 'Follow Up Required', required: false, description: 'Is follow-up required? true/false' },
-                'follow_up_date': { label: 'Follow Up Date', required: false, description: 'Date for follow-up (YYYY-MM-DD)' },
-                'escalation_level': { label: 'Escalation Level', required: false, description: 'Level of escalation if not resolved' },
-                'legal_reference': { label: 'Legal Reference', required: false, description: 'Legal reference or clause' },
-                'amount_involved': { label: 'Amount Involved', required: false, description: 'Amount involved in the notice (if any)' },
-                'contact_person': { label: 'Contact Person', required: false, description: 'Contact person for the notice' },
-                'contact_phone': { label: 'Contact Phone', required: false, description: 'Contact phone number' },
-                'internal_notes': { label: 'Internal Notes', required: false, description: 'Internal notes for staff only' }
+                'tenancy_ref': { label: 'Tenancy reference', required: false, description: 'e.g. TM3NTAVFLO (best way to find the tenancy)' },
+                'tenant_profile_ref': { label: 'Tenant reference', required: false, description: 'If you have no tenancy reference' },
+                'tenant_email': { label: 'Tenant e-mail', required: false, description: 'If you have neither reference' },
+                'notice_type': { label: 'Notice type', required: true, description: 'lease_termination, rent_increase, eviction_notice, other…' },
+                'notice_date': { label: 'Notice date', required: true, description: 'When it was given' },
+                'effective_date': { label: 'Takes effect', required: true, description: 'e.g. the move-out date' },
+                'notice_subject': { label: 'Subject', required: false, description: 'Defaults to the notice type' },
+                'notice_details': { label: 'Details', required: false, description: 'What the notice said' },
+                'notice_period': { label: 'Notice period (days)', required: false, description: 'Worked out from the dates if empty' },
+                'delivery_methods': { label: 'Given by', required: false, description: 'email, sms or physical (comma-separated)' }
             }
         };
 
@@ -2774,7 +2581,10 @@ class BulkUploadManager {
 
     findMatchingHeader(fieldKey) {
         const variations = this.getFieldVariations(fieldKey);
-        
+        // An exact header name wins (so "deposit" does not take "deposit_held"), then a header containing it.
+        const exact = this.csvHeaders.findIndex(h => [fieldKey, ...variations].some(v => h.toLowerCase().trim() === v.toLowerCase()));
+        if (exact !== -1) return exact;
+
         for (let i = 0; i < this.csvHeaders.length; i++) {
             const header = this.csvHeaders[i].toLowerCase().trim();
             if (variations.some(variation => header.includes(variation.toLowerCase()))) {
@@ -2829,11 +2639,12 @@ class BulkUploadManager {
             'tenancy_ref': ['tenancy_ref', 'tenancy reference', 'tenancy_reference', 'tenant_ref', 'reference'],
             'tenant_profile_ref': ['tenant_profile_ref', 'profile_ref', 'tenant profile ref', 'profile reference'],
             'tenant_email': ['tenant_email', 'email', 'tenant email', 'email_address'],
-            'invoice_id': ['invoice_id', 'invoice', 'invoice number', 'invoice_number', 'invoice_ref'],
+            'invoice_id': ['invoice_number', 'invoice_id', 'invoice number', 'invoice_ref', 'invoice'],
             'payment_date': ['payment_date', 'date', 'payment date', 'paid_date'],
             'amount_paid': ['amount_paid', 'amount', 'paid', 'payment_amount', 'total_paid'],
             'payment_method': ['payment_method', 'method', 'payment type', 'payment_type'],
             'payment_status': ['payment_status', 'status', 'payment_status'],
+            'cleared': ['cleared', 'has_cleared', 'confirmed'],
             'transaction_reference': ['transaction_reference', 'reference', 'transaction_ref', 'receipt', 'mpesa_code'],
             'late_fee': ['late_fee', 'late fee', 'penalty', 'late_fee_amount'],
             'late_fee_paid_now': ['late_fee_paid_now', 'late fee paid', 'pay_late_fee_now'],
@@ -2889,20 +2700,13 @@ class BulkUploadManager {
                 isValid = false;
             }
             
-            // Validate partial payment allocation fields
-            const hasPartialFields = mappedFields['single_invoice_amount'] || 
-                                   (mappedFields['lease_amount'] && mappedFields['service_charge_amount']);
-            
-            if (!hasPartialFields) {
-                warnings.push('No allocation fields mapped. Ensure your data has allocation amounts for partial payments');
-            }
-            
             // Validate payment method values
             if (mappedFields['payment_method']) {
                 const paymentMethodSamples = this.getSampleDataForField('payment_method', mappedFields);
                 const validMethods = ['cash', 'bank_transfer', 'mobile_money', 'check', 'card', 'other'];
-                const invalidMethods = paymentMethodSamples.filter(method => 
-                    method && !validMethods.includes(method.toLowerCase().replace(/\s+/g, '_'))
+                const aliases = ['mpesa', 'm-pesa', 'm_pesa', 'bank', 'eft', 'cheque', 'debit_card', 'credit_card'];
+                const invalidMethods = paymentMethodSamples.filter(method =>
+                    method && ![...validMethods, ...aliases].includes(method.toLowerCase().trim().replace(/\s+/g, '_'))
                 );
                 
                 if (invalidMethods.length > 0) {
@@ -2910,18 +2714,6 @@ class BulkUploadManager {
                 }
             }
             
-            // Validate payment status values
-            if (mappedFields['payment_status']) {
-                const statusSamples = this.getSampleDataForField('payment_status', mappedFields);
-                const validStatuses = ['paid', 'partial', 'pending', 'failed'];
-                const invalidStatuses = statusSamples.filter(status => 
-                    status && !validStatuses.includes(status.toLowerCase())
-                );
-                
-                if (invalidStatuses.length > 0) {
-                    warnings.push(`Some payment statuses may be invalid: ${invalidStatuses.join(', ')}. Valid statuses: ${validStatuses.join(', ')}`);
-                }
-            }
             
             // Validate date formats
             if (mappedFields['payment_date']) {
@@ -3115,7 +2907,7 @@ class BulkUploadManager {
         const errors = [];
         
         // Check if required fields have data in sample rows
-        const requiredPaymentFields = ['invoice_id', 'payment_date', 'amount_paid', 'payment_method', 'payment_status'];
+        const requiredPaymentFields = ['payment_date', 'amount_paid', 'payment_method'];
         
         requiredPaymentFields.forEach(fieldKey => {
             if (this.fieldMappings[fieldKey]) {
@@ -3127,7 +2919,7 @@ class BulkUploadManager {
         });
         
         // Validate amount fields are numeric
-        const amountFields = ['amount_paid', 'late_fee', 'single_invoice_amount', 'lease_amount', 'service_charge_amount', 'bank_charges'];
+        const amountFields = ['amount_paid'];
         amountFields.forEach(fieldKey => {
             if (this.fieldMappings[fieldKey]) {
                 const samples = this.getSampleDataForField(fieldKey, this.fieldMappings);
@@ -5108,6 +4900,14 @@ $(document).ready(function() {
             window.bulkUploadManager = new BulkUploadManager();
         }
     });
+
+    // ?import=payments (linked from Payment reconciliation) opens the import window with that kind of file chosen.
+    const presetImport = new URLSearchParams(window.location.search).get('import');
+    const importModal = document.getElementById('kt_modal_bulk_upload');
+    if (importModal && ['tenants', 'payments', 'notices'].includes(presetImport) && window.bootstrap) {
+        window.ertyPresetImport = presetImport; // applied by BulkUploadManager once its listeners are bound
+        bootstrap.Modal.getOrCreateInstance(importModal).show();
+    }
 
     // Reset file area when modal is hidden
     $('#kt_modal_bulk_upload').on('hidden.bs.modal', function() {

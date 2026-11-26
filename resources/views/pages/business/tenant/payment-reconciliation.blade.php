@@ -20,6 +20,20 @@
             <div><span>Matched in the last 30 days</span><strong id="stat-recent-matches">{{ number_format($recentMatchesCount) }}</strong><small>Receipts attached to payments</small></div>
         </div>
 
+        @if(can_open('/tenant_management/bulk-upload/template/payments') && !app(\App\Services\Access\PropertyAccess::class)->restricted())
+            <div class="recon-import">
+                <i class="fas fa-file-csv" aria-hidden="true"></i>
+                <div>
+                    <strong>Payments not recorded yet?</strong>
+                    <span>Record many at once from a spreadsheet, such as a bank or M-Pesa statement: one row per payment with the tenancy reference, date, amount and method. Each payment settles the tenant's oldest unpaid invoice first. Then attach the receipts here.</span>
+                </div>
+                <div class="recon-import-actions">
+                    <a href="/tenant_management/bulk-upload/template/payments" class="btn btn-sm btn-light"><i class="fas fa-download me-1" aria-hidden="true"></i>Example file (CSV)</a>
+                    <a href="/tenant_management?import=payments" class="btn btn-sm btn-primary"><i class="fas fa-upload me-1" aria-hidden="true"></i>Import payments</a>
+                </div>
+            </div>
+        @endif
+
         <div class="recon-workspace">
             {{-- Step 1: the proof of payment --}}
             <section class="tenant-panel tenant-panel--padded recon-files" aria-labelledby="recon-files-heading">

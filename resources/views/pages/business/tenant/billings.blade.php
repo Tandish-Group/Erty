@@ -7,7 +7,11 @@
     <div class="container-xxl" id="kt_content_container">
         <header class="tenant-page-heading">
             <div><span class="tenant-eyebrow">Tenant workspace</span><h1>Tenancy billings</h1><p>What each tenant owes now, what is overdue, and credit and deposits held. Collection reports are under Reports.</p></div>
-            <div class="tenant-heading-actions"><a href="/tenant_management" class="btn btn-light">← Back to tenant dashboard</a>@businessCan('reports', 'financial')<a href="{{ route('reports.show', 'rent-roll') }}" class="btn btn-light-primary"><i class="fas fa-chart-bar me-1" aria-hidden="true"></i>Rent roll &amp; arrears report</a>@endbusinessCan@businessCan('agent_management', 'view')<a href="{{ route('tenant_management.agent_commissions') }}" class="btn btn-light-primary"><i class="fas fa-user-tie me-1" aria-hidden="true"></i>Agent commissions</a>@endbusinessCan</div>
+            <div class="tenant-heading-actions">
+                <a href="/tenant_management" class="btn btn-light">← Back to tenant dashboard</a>
+                @businessCan('reports', 'financial')<a href="{{ route('reports.show', 'rent-roll') }}" class="btn btn-light-primary"><i class="fas fa-chart-bar me-1" aria-hidden="true"></i>Rent roll &amp; arrears report</a>@endbusinessCan
+                @businessCan('agent_management', 'view')<a href="{{ route('tenant_management.agent_commissions') }}" class="btn btn-light-primary"><i class="fas fa-user-tie me-1" aria-hidden="true"></i>Agent commissions</a>@endbusinessCan
+            </div>
         </header>
 
         <section class="tenant-panel tenant-billing-workspace">

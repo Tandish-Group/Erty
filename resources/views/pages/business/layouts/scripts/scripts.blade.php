@@ -130,13 +130,7 @@
 
 @if(request()->is('tenant_management/movement') || request()->is('tenant_management/movement/*'))
 
-<script>
-    window.appConfig = {
-        currency: "{{ default_currency() }}",
-        currencySymbol: "{{ config('services.currency_symbol', '$') }}"
-    };
-</script>
-<script src="{{ app('asset_versioned')('js/pages/business/tenant_movement.js') }}"></script>
+<script src="{{ app('asset_versioned')('js/pages/business/tenant_transfer.js') }}"></script>
 
 @endif
 

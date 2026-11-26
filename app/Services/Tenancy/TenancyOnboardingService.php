@@ -346,19 +346,26 @@ class TenancyOnboardingService
                 if ($conversionLead) {
                     app(\App\Services\Crm\LeadConversionService::class)->markConverted($conversionLead, $tenantManagement);
                 }
-                // Confirmation to the agent credited with the tenancy (and their lead agent).
-                app(\App\Services\Tenancy\TenancyNotificationService::class)->tenancyAssigned($tenantManagement);
+                // An imported tenancy (Tenants → Import data) already exists outside Erty: nobody is told about it.
+                $imported = $request->boolean('imported');
+                if (!$imported) {
+                    // Confirmation to the agent credited with the tenancy (and their lead agent).
+                    app(\App\Services\Tenancy\TenancyNotificationService::class)->tenancyAssigned($tenantManagement);
+                }
 
                 // Move-in invoices: the deposit and the first rent period (billed in advance); periods already
                 // paid before Erty ("rent paid up to") are recorded as settled. The email goes out after commit.
                 $moveInInvoices = app(\App\Services\Rent\TenantChargesService::class)->startBilling($tenantManagement, notify: false);
-                DB::afterCommit(fn () => app(\App\Services\Rent\TenantChargesService::class)->notify($tenantManagement->fresh(), $moveInInvoices));
+                if (!$imported) {
+                    DB::afterCommit(fn () => app(\App\Services\Rent\TenantChargesService::class)->notify($tenantManagement->fresh(), $moveInInvoices));
+                }
 
                 // Create Lease Record if lease dates are provided
                 $lease_type = (!empty($data['start_date']) && !empty($data['end_date']) ? 'fixed-term' : 'month-to-month');
                 $leaseData = [
                     'tenant_management_id' => $tenantManagement->id,
-                    'business_id' => auth()->user()->business->id,
+                    // A team member has no business of their own: the lease belongs to the owner's.
+                    'business_id' => auth()->user()?->business?->id ?? \App\Models\Business::where('user_id', business_owner_id())->value('id'),
                     'lease_start_date' => $data['start_date'],
                     'lease_end_date' => $data['end_date'] ?? null,
                     'rent_amount' => $data['monthly_payment'],
@@ -405,7 +412,10 @@ class TenancyOnboardingService
 
                 // Send welcome email to the tenant
                 $tenantDetails = TenantProfile::where('id', $tenantProfileId)->first();
-                DB::afterCommit(function () use ($tenantManagement, $tenantDetails, $legal_files) {
+                DB::afterCommit(function () use ($tenantManagement, $tenantDetails, $legal_files, $imported) {
+                    if ($imported) {
+                        return;
+                    }
                     try {
                         $this->tenantStore->sendWelcomeEmail($tenantManagement, $tenantDetails, $legal_files);
                     } catch (\Throwable $exception) {

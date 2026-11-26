@@ -1,81 +1,89 @@
 @extends('pages.business.layouts.app')
 
 @section('content')
-
 @include('pages.business.tenant.partials.header', ['title' => 'Unit transfers'])
+@php
+    use App\Http\Controllers\Business\Tenancies\TenantMovementController as Transfers;
+    $tab = fn (string $status) => route('tenant_movement.index', array_filter(array_merge(request()->except('page', 'status'), ['status' => $status])));
+    $total = $counts->sum();
+    $canTransfer = can_open('/tenant_management/movement/create');
+@endphp
 
-<!--begin::Content-->
-<div class="content d-flex flex-column flex-column-fluid tenant-workspace tenant-movement-page" id="kt_content">
+<div class="content d-flex flex-column flex-column-fluid tenant-workspace transfers-page" id="kt_content">
     <div class="container-xxl" id="kt_content_container">
         <header class="tenant-page-heading">
-            <div><span class="tenant-eyebrow">Tenant workspace</span><h1>Unit transfers</h1><p>Review requests and move tenants between units.</p></div>
-            <div class="tenant-heading-actions"><a href="/tenant_management" class="btn btn-light">← Back to tenant dashboard</a>@businessCan('tenant_management', 'transfers')<a href="/tenant_management/movement/create" class="btn btn-primary">＋ Initiate transfer</a>@endbusinessCan</div>
+            <div>
+                <span class="tenant-eyebrow"><a href="/tenant_management">Tenants</a> · Transfers</span>
+                <h1>Unit transfers</h1>
+                <p>Move a tenant to another unit in the same property. The tenant keeps their account, agent and billing cycle; the move ends the old tenancy and opens a new one on the transfer date.</p>
+            </div>
+            <div class="tenant-heading-actions">
+                @if($canTransfer)<a href="{{ route('tenant_movement.create') }}" class="btn btn-primary"><i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>Request a transfer</a>@endif
+            </div>
         </header>
 
-        <div class="tenant-metrics mb-8" aria-label="Transfer status totals">
-            <div id="stat_pending_card" data-status="pending" role="button" tabindex="0" aria-pressed="false" aria-label="Filter by pending transfers"><span>Pending transfers</span><strong id="stat_pending">—</strong><small>Awaiting review</small></div>
-            <div id="stat_approved_card" data-status="approved" role="button" tabindex="0" aria-pressed="false" aria-label="Filter by approved transfers"><span>Approved</span><strong id="stat_approved">—</strong><small>Approved requests</small></div>
-            <div id="stat_completed_card" data-status="completed" role="button" tabindex="0" aria-pressed="false" aria-label="Filter by completed transfers"><span>Completed</span><strong id="stat_completed">—</strong><small>Moves completed</small></div>
-            <div id="stat_cancelled_card" data-status="cancelled" role="button" tabindex="0" aria-pressed="false" aria-label="Filter by cancelled transfers"><span>Cancelled</span><strong id="stat_cancelled">—</strong><small>Cancelled requests</small></div>
-        </div>
+        @include('pages.business.tenant.movement.partials.flash')
 
-        <section class="tenant-panel">
-            <div class="tenant-records-toolbar movement-records-toolbar">
-                <div class="tenant-section-heading"><div><h2>Transfer requests</h2><p>Track each move from request through completion.</p></div></div>
-                <div class="movement-filter-controls">
-                    <label class="visually-hidden" for="movements_search">Search by reference or tenant</label>
-                    <input type="search" id="movements_search" class="form-control" placeholder="Search reference or tenant">
-                    <label class="visually-hidden" for="movements_status_filter">Filter by status</label>
-                    <select id="movements_status_filter" class="form-select">
-                        <option value="">All statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+        <nav class="docs-tabs mb-5" aria-label="Transfers by status">
+            <a href="{{ $tab('') }}" class="docs-tab {{ $filters['status'] === '' ? 'is-active' : '' }}" @if($filters['status'] === '') aria-current="page" @endif><span>All</span><em>{{ $total }}</em></a>
+            @foreach(Transfers::STATUSES as $key => [$label])
+                <a href="{{ $tab($key) }}" class="docs-tab {{ $filters['status'] === $key ? 'is-active' : '' }}" @if($filters['status'] === $key) aria-current="page" @endif><span>{{ $label }}</span><em>{{ $counts[$key] ?? 0 }}</em></a>
+            @endforeach
+        </nav>
+
+        @if(($counts['pending'] ?? 0) || $dueSoon)
+            <p class="docs-note docs-note--warn"><i class="fas fa-info-circle" aria-hidden="true"></i>
+                @if($counts['pending'] ?? 0){{ $counts['pending'] }} {{ \Illuminate\Support\Str::plural('transfer', $counts['pending']) }} waiting for approval.@endif
+                @if($dueSoon) {{ $dueSoon }} approved {{ \Illuminate\Support\Str::plural('transfer', $dueSoon) }} {{ $dueSoon === 1 ? 'happens' : 'happen' }} in the next 7 days.@endif
+            </p>
+        @endif
+
+        <form method="get" class="tenant-panel tenant-panel--padded report-filters mb-6" role="search">
+            @if($filters['status'])<input type="hidden" name="status" value="{{ $filters['status'] }}">@endif
+            <div class="docs-search"><label for="tr_q" class="form-label">Search</label>
+                <input id="tr_q" type="search" name="q" value="{{ $filters['q'] }}" class="form-control form-control-sm" placeholder="Reference, tenant or unit"></div>
+            <div><label for="tr_property" class="form-label">Property</label>
+                <select id="tr_property" name="property" class="form-select form-select-sm">
+                    <option value="">All properties</option>
+                    @foreach($properties as $id => $title)<option value="{{ $id }}" @selected($filters['property'] === (int) $id)>{{ $title }}</option>@endforeach
+                </select></div>
+            <div class="report-filter-actions"><button class="btn btn-sm btn-primary">Show</button>@if($filters['q'] !== '' || $filters['property'])<a href="{{ route('tenant_movement.index', array_filter(['status' => $filters['status']])) }}" class="btn btn-sm btn-light">Reset</a>@endif</div>
+        </form>
+
+        <section class="tenant-panel tenant-panel--padded">
+            @if($movements->isEmpty())
+                <div class="tenant-empty"><i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                    @if($total === 0 && $filters['q'] === '' && !$filters['property'])
+                        <h3>No transfers yet</h3><p>When a tenant moves to another unit in the same property, request a transfer: Erty works out the rent adjustment and deposit change, and keeps their account.</p>
+                        @if($canTransfer)<a href="{{ route('tenant_movement.create') }}" class="btn btn-primary">Request a transfer</a>@endif
+                    @else
+                        <h3>No transfers match</h3><p>Try another status, search or property.</p>
+                    @endif
                 </div>
-            </div>
-            <p class="tenant-feedback" data-movement-feedback role="status" hidden></p>
-            <div class="tenant-table-scroll" role="region" aria-label="Unit transfer requests" tabindex="0">
-                <table class="tenant-table" id="kt_table_movements">
-                    <thead><tr><th>Reference</th><th>Tenant</th><th>From unit</th><th aria-label="Moves to"></th><th>To unit</th><th>Transfer date</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody id="movements_table_body">
-                        <tr><td colspan="9" class="text-center text-muted py-10"><span class="spinner-border spinner-border-sm text-primary me-2" role="status"></span>Loading transfers…</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="d-flex justify-content-between align-items-center flex-wrap pt-4" id="movements_pagination_wrapper" style="display:none;">
-                <div class="text-muted fs-7" id="movements_showing_text"></div>
-                <div id="movements_pagination"></div>
-            </div>
+            @else
+                <div class="tenant-table-scroll" role="region" aria-label="Unit transfers" tabindex="0">
+                    <table class="tenant-table transfers-table">
+                        <thead><tr><th>Transfer</th><th>Tenant</th><th>Move</th><th class="d-none d-md-table-cell">Date</th><th class="d-none d-lg-table-cell text-end">Rent</th><th>Status</th><th class="text-end"><span class="visually-hidden">Open</span></th></tr></thead>
+                        <tbody>
+                        @foreach($movements as $m)
+                            @php [$statusLabel, $tone] = Transfers::STATUSES[$m->status] ?? [ucfirst($m->status), 'secondary']; @endphp
+                            <tr>
+                                <td><a href="{{ route('tenant_movement.show', $m->ref) }}" class="fw-semibold">{{ $m->ref }}</a><small class="d-block text-muted">Requested {{ $m->created_at?->format('j M Y') }}</small></td>
+                                <td>{{ $m->tenantProfile?->display_name ?? '—' }}<small class="d-block text-muted">{{ $m->oldTenancy?->complex_name }}</small></td>
+                                <td class="text-nowrap"><span class="transfer-units">{{ $m->from_unit_label }} <i class="fas fa-arrow-right" aria-label="to"></i> {{ $m->to_unit_label }}</span></td>
+                                <td class="d-none d-md-table-cell text-nowrap">{{ $m->transfer_date?->format('j M Y') }}<small class="d-block text-muted">{{ $m->move_type === 'mid_month' ? 'Mid-period' : 'Next billing period' }}</small></td>
+                                <td class="d-none d-lg-table-cell text-end text-nowrap">{{ money($m->new_rent, $m->currency) }}
+                                    @if((float) $m->new_rent !== (float) $m->old_rent)<small class="d-block text-muted">was {{ money($m->old_rent, $m->currency) }}</small>@endif</td>
+                                <td><span class="badge badge-light-{{ $tone }}">{{ $statusLabel }}</span></td>
+                                <td class="text-end"><a href="{{ route('tenant_movement.show', $m->ref) }}" class="btn btn-sm btn-light">{{ $m->status === 'pending' && $canTransfer ? 'Review' : 'Open' }}</a></td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-5">{{ $movements->links() }}</div>
+            @endif
         </section>
     </div>
 </div>
-<!--end::Content-->
-
-<!--begin::Cancel Modal-->
-<div class="modal fade" id="cancelMovementModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered mw-500px">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="fw-bolder">Cancel Transfer</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-5">Are you sure you want to cancel this transfer? This cannot be undone.</p>
-                <input type="hidden" id="cancel_movement_ref">
-                <div class="mb-3">
-                    <label class="form-label">Reason (optional)</label>
-                    <textarea id="cancel_reason" class="form-control" rows="3" placeholder="Reason for cancellation..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-light" data-bs-dismiss="modal">Keep Transfer</button>
-                <button class="btn btn-danger" id="confirm_cancel_btn">Cancel Transfer</button>
-            </div>
-        </div>
-    </div>
-</div>
-<!--end::Cancel Modal-->
-
 @endsection

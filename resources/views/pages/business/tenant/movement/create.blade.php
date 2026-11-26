@@ -1,545 +1,167 @@
 @extends('pages.business.layouts.app')
 
 @section('content')
+@include('pages.business.tenant.partials.header', ['title' => 'Request a transfer'])
+@php
+    use App\Http\Controllers\Business\Tenancies\TenantMovementController as Transfers;
+    $name = $tenancy->tenantProfile?->display_name ?? 'The tenant';
+    $blocked = $arrears['type'] === 'block';
+    $currentLeaseEnd = $lease?->lease_end_date && $lease->lease_end_date->isFuture() ? $lease->lease_end_date->toDateString() : null;
+    $frequency = strtolower($tenancy->payment_frequency ?: 'monthly');
+@endphp
 
-<!--begin::Header-->
-<div id="kt_header" class="header" data-kt-sticky="true" data-kt-sticky-name="header" data-kt-sticky-offset="{default: '200px', lg: '300px'}">
-    <div class="container-xxl d-flex align-items-center justify-content-between" id="kt_header_container">
-        <div class="page-title d-flex flex-column align-items-start justify-content-center flex-wrap me-lg-2 pb-2 pb-lg-0" data-kt-swapper="true" data-kt-swapper-mode="prepend" data-kt-swapper-parent="{default: '#kt_content_container', lg: '#kt_header_container'}">
-            <h1 class="d-flex flex-column text-dark fw-bolder my-0 fs-1">Initiate Unit Transfer</h1>
-            <ul class="breadcrumb breadcrumb-dot fw-bold fs-base my-1">
-                <li class="breadcrumb-item text-muted">Home</li>
-                <li class="breadcrumb-item text-muted"><a href="/tenant_management" class="text-muted">Tenant Management</a></li>
-                <li class="breadcrumb-item text-muted"><a href="/tenant_management/movement" class="text-muted">Unit Transfers</a></li>
-                <li class="breadcrumb-item text-dark">Initiate Transfer</li>
-            </ul>
-        </div>
-        <div class="d-flex d-lg-none align-items-center ms-n2 me-2">
-            <div class="btn btn-icon btn-active-icon-primary" id="kt_aside_toggle">
-                <span class="svg-icon svg-icon-1 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M21 7H3C2.4 7 2 6.6 2 6V4C2 3.4 2.4 3 3 3H21C21.6 3 22 3.4 22 4V6C22 6.6 21.6 7 21 7Z" fill="black" />
-                        <path opacity="0.3" d="M21 14H3C2.4 14 2 13.6 2 13V11C2 10.4 2.4 10 3 10H21C21.6 10 22 10.4 22 11V13C22 13.6 21.6 14 21 14ZM22 20V18C22 17.4 21.6 17 21 17H3C2.4 17 2 17.4 2 18V20C2 20.6 2.4 21 3 21H21C21.6 21 22 20.6 22 20Z" fill="black" />
-                    </svg>
-                </span>
-            </div>
-        </div>
-        @include('pages.business.include.topbar.index')
-    </div>
-</div>
-<!--end::Header-->
-
-<!--begin::Content-->
-<div class="content d-flex flex-column flex-column-fluid" id="kt_content">
+<div class="content d-flex flex-column flex-column-fluid tenant-workspace transfers-page" id="kt_content">
     <div class="container-xxl" id="kt_content_container">
-
-        <!--begin::Stepper-->
-        <div class="card">
-            <div class="card-header d-flex flex-row justify-content-end">
-                <div class="card-toolbar">
-                    <a href="/tenant_management/movement" class="btn btn-light-primary"><i class="fas fa-arrow-left"></i> Go Back</a>
-                </div>
+        <header class="tenant-page-heading">
+            <div>
+                <span class="tenant-eyebrow"><a href="{{ route('tenant_movement.index') }}">Unit transfers</a> · Step 2 of 2</span>
+                <h1>Move {{ $name }}</h1>
+                <p>From unit <strong>{{ $tenancy->unit_number }}</strong> at {{ $tenancy->complex?->title ?? $tenancy->complex_name }} to another unit in the same property. The request waits for approval before anything changes.</p>
             </div>
-            <div class="card-body">
+            <div class="tenant-heading-actions"><a href="{{ route('tenant_movement.create') }}" class="btn btn-light">Choose another tenancy</a></div>
+        </header>
 
-                {{-- Inject server-side page data for JS --}}
-                <script>
-                    window.currentPageData = @json($pageData);
-                </script>
+        @include('pages.business.tenant.movement.partials.flash')
 
-                <!--begin::Stepper Header-->
-                <div class="stepper stepper-pills stepper-column d-flex flex-column flex-xl-row flex-row-fluid" id="movement_stepper">
-                    <div class="d-flex justify-content-center justify-content-xl-start flex-row-auto w-100 w-xl-300px">
-                        <div class="stepper-nav ps-lg-10">
-
-                            <div class="stepper-item current" data-kt-stepper-element="nav" id="step_nav_1">
-                                <div class="stepper-wrapper d-flex flex-row">
-                                    <div class="stepper-icon w-40px h-40px">
-                                        <i class="stepper-check fas fa-check"></i>
-                                        <span class="stepper-number">1</span>
-                                    </div>
-                                    <div class="stepper-label">
-                                        <h3 class="stepper-title">Transfer Details</h3>
-                                        <div class="stepper-desc fw-bold">Select tenant and target unit</div>
-                                    </div>
-                                </div>
-                                <div class="stepper-line h-40px"></div>
-                            </div>
-
-                            <div class="stepper-item" data-kt-stepper-element="nav" id="step_nav_2">
-                                <div class="stepper-wrapper d-flex flex-row">
-                                    <div class="stepper-icon w-40px h-40px">
-                                        <i class="stepper-check fas fa-check"></i>
-                                        <span class="stepper-number">2</span>
-                                    </div>
-                                    <div class="stepper-label">
-                                        <h3 class="stepper-title">New Lease Terms</h3>
-                                        <div class="stepper-desc fw-bold">Set terms for the new unit</div>
-                                    </div>
-                                </div>
-                                <div class="stepper-line h-40px"></div>
-                            </div>
-
-                            <div class="stepper-item" data-kt-stepper-element="nav" id="step_nav_3">
-                                <div class="stepper-wrapper d-flex flex-row">
-                                    <div class="stepper-icon w-40px h-40px">
-                                        <i class="stepper-check fas fa-check"></i>
-                                        <span class="stepper-number">3</span>
-                                    </div>
-                                    <div class="stepper-label">
-                                        <h3 class="stepper-title">Deposit & Parking</h3>
-                                        <div class="stepper-desc fw-bold">Adjust deposit and parking</div>
-                                    </div>
-                                </div>
-                                <div class="stepper-line h-40px"></div>
-                            </div>
-
-                            <div class="stepper-item" data-kt-stepper-element="nav" id="step_nav_4">
-                                <div class="stepper-wrapper d-flex flex-row">
-                                    <div class="stepper-icon w-40px h-40px">
-                                        <i class="stepper-check fas fa-check"></i>
-                                        <span class="stepper-number">4</span>
-                                    </div>
-                                    <div class="stepper-label">
-                                        <h3 class="stepper-title">Preview & Confirm</h3>
-                                        <div class="stepper-desc fw-bold">Review and submit</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <!--begin::Stepper Content-->
-                    <div class="flex-row-fluid py-lg-5 px-lg-15">
-
-                        {{-- Hidden state inputs --}}
-                        <input type="hidden" id="movement_tenancy_id"   value="{{ $pageData['tenancy_id'] ?? '' }}">
-                        <input type="hidden" id="movement_complex_id"   value="{{ $pageData['complex_id'] ?? '' }}">
-                        <input type="hidden" id="movement_unit_type"    value="{{ $pageData['unit_type'] ?? '' }}">
-                        <input type="hidden" id="movement_currency"     value="{{ $pageData['currency'] ?? 'USD' }}">
-
-                        <!--===== STEP 1: Transfer Details =====-->
-                        <div id="movement_step_1">
-
-                            {{-- Tenant select (shown only when no tenancy pre-selected) --}}
-                            <div id="tenant_select_wrapper" class="mb-8" style="{{ !empty($pageData['tenancy_id']) ? 'display:none' : '' }}">
-                                <label class="form-label required fw-bold fs-6">Select Tenant</label>
-                                <select id="movement_tenant_select" class="form-select form-select-solid" data-placeholder="Search tenants…"></select>
-                                <div class="text-danger mt-1 d-none" id="tenant_select_error">Please select a tenant to continue.</div>
-                            </div>
-
-                            {{-- Current tenancy info (shown when pre-selected) --}}
-                            <div id="current_tenancy_info" class="mb-8 {{ empty($pageData['tenancy_id']) ? 'd-none' : '' }}">
-                                <div class="alert alert-light-primary d-flex align-items-center p-5 mb-0">
-                                    <i class="fas fa-user-circle fs-2tx text-primary me-4"></i>
-                                    <div>
-                                        <h4 class="mb-1 fw-bolder" id="tenancy_info_name">{{ $pageData['tenant_name'] ?? '' }}</h4>
-                                        <div class="text-muted fs-7">Current unit: <strong id="tenancy_info_unit">{{ $pageData['unit_number'] ?? '' }}</strong></div>
-                                        <div class="text-muted fs-7">Monthly rent: <strong id="tenancy_info_rent">{{ $pageData['currency'] ?? '' }} {{ number_format($pageData['monthly_payment'] ?? 0, 2) }}</strong></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Arrears banner (injected by JS) --}}
-                            <div id="arrears_banner"></div>
-
-                            <div class="row g-6 mb-6">
-                                <div class="col-md-6">
-                                    <label class="form-label required fw-bold fs-6">Target Unit</label>
-                                    <select id="movement_new_unit" class="form-select form-select-solid" data-placeholder="Select vacant unit…">
-                                        <option value="">— select after choosing tenant —</option>
-                                    </select>
-                                    <div class="text-danger mt-1 d-none" id="unit_select_error">Please select a target unit.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required fw-bold fs-6">Move Type</label>
-                                    <select id="movement_move_type" class="form-select form-select-solid">
-                                        <option value="end_of_month">End of Month (standard)</option>
-                                        <option value="mid_month">Mid Month (exceptional)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {{-- ===== RESIDENTIAL UNIT DETAILS (shown when unit_type = residential) ===== --}}
-                            <div id="residential_unit_extra" class="d-none mt-4 mb-6">
-                                <div class="separator separator-dashed mb-6"></div>
-                                <h5 class="fw-bolder mb-5 text-primary"><i class="fas fa-home me-2"></i>Residential Unit Details</h5>
-
-                                {{-- Read-only auto-filled stats --}}
-                                <div class="row g-4 mb-6" id="residential_unit_info_row">
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label fw-bold fs-7 text-muted">Bedrooms</label>
-                                        <div class="fw-bolder fs-5" id="res_info_bedrooms">—</div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label fw-bold fs-7 text-muted">Bathrooms</label>
-                                        <div class="fw-bolder fs-5" id="res_info_bathrooms">—</div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label fw-bold fs-7 text-muted">Floor Area</label>
-                                        <div class="fw-bolder fs-5" id="res_info_sqarea">—</div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label fw-bold fs-7 text-muted">Base Monthly Rate</label>
-                                        <div class="fw-bolder fs-5" id="res_info_rent">—</div>
-                                    </div>
-                                </div>
-
-                                <div class="row g-6 mb-6">
-                                    <div class="col-md-6">
-                                        <label class="form-label required fw-bold fs-6">Furnishing</label>
-                                        <select id="movement_furnishing" class="form-select form-select-solid">
-                                            <option value="">— select —</option>
-                                            <option value="Unfurnished">Unfurnished</option>
-                                            <option value="Furnished">Furnished</option>
-                                            <option value="Partially Furnished">Partially Furnished</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label required fw-bold fs-6">Number of Occupants</label>
-                                        <input type="number" id="movement_occupants" class="form-control form-control-solid" min="1" value="1">
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold fs-6">Pets</label>
-                                    <div class="d-flex gap-6 mb-3">
-                                        <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                            <input class="form-check-input" type="radio" name="movement_has_pets" value="0" checked> No pets
-                                        </label>
-                                        <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                            <input class="form-check-input" type="radio" name="movement_has_pets" value="1"> Has pets
-                                        </label>
-                                    </div>
-                                    <div id="movement_pet_details_wrapper" class="d-none">
-                                        <textarea id="movement_pet_details" class="form-control form-control-solid" rows="2"
-                                            placeholder="Describe the pets (type, breed, number…)"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            {{-- ===== /RESIDENTIAL UNIT DETAILS ===== --}}
-
-                            {{-- ===== COMMERCIAL UNIT DETAILS (shown when unit_type = commercial) ===== --}}
-                            <div id="commercial_unit_extra" class="d-none mt-4 mb-6">
-                                <div class="separator separator-dashed mb-6"></div>
-                                <h5 class="fw-bolder mb-5 text-success"><i class="fas fa-building me-2"></i>Commercial Unit Details</h5>
-
-                                {{-- Availability info panel (populated by JS) --}}
-                                <div id="commercial_availability_info" class="alert alert-light-info d-flex align-items-start p-5 mb-6 d-none">
-                                    <i class="fas fa-info-circle fs-2x text-info me-4 mt-1"></i>
-                                    <div class="row w-100 g-3">
-                                        <div class="col-6 col-md-3">
-                                            <div class="text-muted fs-7">Total Unit Size</div>
-                                            <div class="fw-bolder" id="comm_total_sqft">—</div>
-                                        </div>
-                                        <div class="col-6 col-md-3">
-                                            <div class="text-muted fs-7">Min Required Area</div>
-                                            <div class="fw-bolder" id="comm_min_sqft">—</div>
-                                        </div>
-                                        <div class="col-6 col-md-3">
-                                            <div class="text-muted fs-7">Max Subdivisions</div>
-                                            <div class="fw-bolder" id="comm_max_subdivisions">—</div>
-                                        </div>
-                                        <div class="col-6 col-md-3">
-                                            <div class="text-muted fs-7">Base Monthly Rate</div>
-                                            <div class="fw-bolder" id="comm_base_rent">—</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row g-6 mb-6">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold fs-6">Specific Unit / Sub-unit Number</label>
-                                        <input type="text" id="movement_specific_unit_number" class="form-control form-control-solid" placeholder="e.g. A-101">
-                                        <div class="form-text">Subdivision identifier within the commercial unit</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label required fw-bold fs-6">Occupied Area (sq ft)</label>
-                                        <input type="number" id="movement_occupied_sqft" class="form-control form-control-solid" min="1" step="0.01" placeholder="Enter sq ft needed">
-                                        <div class="text-muted fs-7 mt-1">Min: <span id="comm_min_label" class="fw-bold text-warning">—</span> sq ft</div>
-                                    </div>
-                                </div>
-
-                                <div class="row g-6 mb-6">
-                                    <div class="col-md-6">
-                                        <label class="form-label required fw-bold fs-6">Rate per sq ft</label>
-                                        <input type="number" id="movement_rate_per_sqft" class="form-control form-control-solid" min="0" step="0.01" placeholder="Enter rate">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label required fw-bold fs-6">Service Charge per sq ft</label>
-                                        <input type="number" id="movement_service_charge_per_sqft" class="form-control form-control-solid" min="0" step="0.01" placeholder="Enter service charge rate">
-                                    </div>
-                                </div>
-
-                                {{-- Live rent calculation banner --}}
-                                <div id="commercial_rent_calc_banner" class="alert alert-primary d-none mb-2">
-                                    <i class="fas fa-calculator me-2"></i>
-                                    <strong>Calculated Monthly Rent:</strong>
-                                    <span id="calc_sqft">0</span> sq ft
-                                    × (<span id="calc_rate">0</span> + <span id="calc_sc">0</span>) =
-                                    <strong class="text-primary fs-5 ms-1" id="calc_total_rent">0.00</strong>
-                                    <span id="rent_currency_calc_label" class="ms-1 text-muted"></span>
-                                </div>
-                                <div class="text-danger mt-1 d-none" id="commercial_fields_error">Please fill in all required commercial fields.</div>
-                            </div>
-                            {{-- ===== /COMMERCIAL UNIT DETAILS ===== --}}
-
-                            <div class="row g-6 mb-6">
-                                <div class="col-md-6">
-                                    <label class="form-label required fw-bold fs-6">Transfer Date</label>
-                                    <input type="date" id="movement_transfer_date" class="form-control form-control-solid">
-                                    <div class="text-danger mt-1 d-none" id="date_error">Please select a transfer date.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Notes</label>
-                                    <input type="text" id="movement_notes" class="form-control form-control-solid" placeholder="Optional notes…">
-                                </div>
-                            </div>
-
-                            {{-- Arrears acknowledgement checkbox (shown by JS when warning) --}}
-                            <div id="arrears_ack_wrapper" class="d-none mb-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="arrears_acknowledged">
-                                    <label class="form-check-label fw-semibold" for="arrears_acknowledged">
-                                        I acknowledge the outstanding arrears and confirm the transfer may proceed.
-                                    </label>
-                                </div>
-                                <div class="text-danger mt-1 d-none" id="arrears_ack_error">You must acknowledge the arrears to continue.</div>
-                            </div>
-
-                        </div>
-                        <!--===== /STEP 1 =====-->
-
-                        <!--===== STEP 2: New Lease Terms =====-->
-                        <div id="movement_step_2" class="d-none">
-
-                            <div class="row g-6 mb-6">
-                                <div class="col-md-6">
-                                    <label class="form-label required fw-bold fs-6">New Monthly Rent</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text" id="rent_currency_label">USD</span>
-                                        <input type="number" id="movement_new_rent" class="form-control form-control-solid" step="0.01" min="0">
-                                    </div>
-                                    <div class="form-text text-info d-none" id="rent_auto_note">
-                                        <i class="fas fa-calculator me-1"></i>Auto-calculated from sq ft × rate
-                                    </div>
-                                    <div class="text-danger mt-1 d-none" id="rent_error">Please enter the new rent amount.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required fw-bold fs-6">Lease Start Date</label>
-                                    <input type="date" id="lease_start_date" class="form-control form-control-solid">
-                                </div>
-                            </div>
-
-                            <div class="row g-6 mb-6">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Lease End Date</label>
-                                    <input type="date" id="lease_end_date" class="form-control form-control-solid">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Lease Duration (months)</label>
-                                    <input type="number" id="lease_duration_months" class="form-control form-control-solid" min="1">
-                                </div>
-                            </div>
-
-                            <div class="row g-6 mb-6">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Payment Frequency</label>
-                                    <select id="lease_payment_frequency" class="form-select form-select-solid">
-                                        <option value="monthly">Monthly</option>
-                                        <option value="quarterly">Quarterly</option>
-                                        <option value="biannual">Bi-Annual</option>
-                                        <option value="annual">Annual</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Payment Day of Month</label>
-                                    <input type="number" id="lease_payment_day" class="form-control form-control-solid" min="1" max="31" value="1">
-                                </div>
-                            </div>
-
-                            <div class="row g-6 mb-6">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Lease Type</label>
-                                    <select id="lease_type" class="form-select form-select-solid">
-                                        <option value="fixed">Fixed Term</option>
-                                        <option value="month_to_month">Month-to-Month</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Late Fee</label>
-                                    <input type="number" id="lease_late_fee" class="form-control form-control-solid" step="0.01" min="0" value="0">
-                                </div>
-                            </div>
-
-                            <div class="mb-6">
-                                <label class="form-label fw-bold fs-6">Special Terms</label>
-                                <textarea id="lease_special_terms" class="form-control form-control-solid" rows="3" placeholder="Any special terms or conditions…"></textarea>
-                            </div>
-
-                        </div>
-                        <!--===== /STEP 2 =====-->
-
-                        <!--===== STEP 3: Deposit & Parking =====-->
-                        <div id="movement_step_3" class="d-none">
-
-                            <div class="row g-6 mb-8">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold fs-6">Previous Deposit</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text" id="deposit_currency_label">USD</span>
-                                        <input type="number" id="movement_old_deposit" class="form-control form-control-solid" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required fw-bold fs-6">New Deposit</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">USD</span>
-                                        <input type="number" id="movement_new_deposit" class="form-control form-control-solid" step="0.01" min="0">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!--begin::Deposit Adjustment Banner-->
-                            <div id="deposit_adjustment_banner" class="alert mb-8 d-none">
-                                <span id="deposit_adjustment_text"></span>
-                            </div>
-                            <!--end::Deposit Adjustment Banner-->
-
-                            <!--begin::Parking Section (shown by JS only if tenant has parking)-->
-                            <div id="parking_section" class="d-none">
-                                <div class="separator separator-dashed mb-6"></div>
-                                <h4 class="fw-bolder mb-5">Parking Slot</h4>
-                                <div class="alert alert-light-info mb-6" id="current_parking_info">
-                                    <i class="fas fa-car me-2 text-info"></i>
-                                    Current slot: <strong id="current_slot_label">—</strong>
-                                </div>
-                                <div class="mb-6">
-                                    <label class="form-label required fw-bold fs-6">Parking Action</label>
-                                    <div class="d-flex gap-4 flex-wrap">
-                                        <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                            <input class="form-check-input" type="radio" name="parking_action" id="parking_keep" value="keep" checked>
-                                            <span>Keep same slot</span>
-                                        </label>
-                                        <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                            <input class="form-check-input" type="radio" name="parking_action" id="parking_release" value="release">
-                                            <span>Release slot</span>
-                                        </label>
-                                        <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                            <input class="form-check-input" type="radio" name="parking_action" id="parking_replace" value="replace">
-                                            <span>Assign new slot</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div id="new_parking_slot_wrapper" class="d-none mb-6">
-                                    <label class="form-label required fw-bold fs-6">Select New Parking Slot</label>
-                                    <select id="movement_new_parking_slot" class="form-select form-select-solid">
-                                        <option value="">Loading slots…</option>
-                                    </select>
-                                    <div class="text-danger mt-1 d-none" id="parking_slot_error">Please select a parking slot.</div>
-                                </div>
-                            </div>
-                            <!--end::Parking Section-->
-
-                        </div>
-                        <!--===== /STEP 3 =====-->
-
-                        <!--===== STEP 4: Preview & Confirm =====-->
-                        <div id="movement_step_4" class="d-none">
-
-                            <div id="preview_loading" class="text-center py-10">
-                                <div class="spinner-border text-primary"></div>
-                                <p class="mt-3 text-muted">Building preview…</p>
-                            </div>
-
-                            <div id="preview_content" class="d-none">
-
-                                <!--Transfer Summary-->
-                                <div class="card bg-light-primary border-0 mb-6">
-                                    <div class="card-body py-4 px-6">
-                                        <h4 class="fw-bolder text-primary mb-4">Transfer Summary</h4>
-                                        <div class="row g-4">
-                                            <div class="col-sm-6">
-                                                <div class="text-muted fs-7 mb-1">Tenant</div>
-                                                <div class="fw-bolder" id="preview_tenant_name">—</div>
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <div class="text-muted fs-7 mb-1">Move Type</div>
-                                                <div class="fw-bolder" id="preview_move_type">—</div>
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <div class="text-muted fs-7 mb-1">From Unit</div>
-                                                <div class="fw-bolder text-danger" id="preview_from_unit">—</div>
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <div class="text-muted fs-7 mb-1">To Unit</div>
-                                                <div class="fw-bolder text-success" id="preview_to_unit">—</div>
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <div class="text-muted fs-7 mb-1">Transfer Date</div>
-                                                <div class="fw-bolder" id="preview_transfer_date">—</div>
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <div class="text-muted fs-7 mb-1">Rent Change</div>
-                                                <div class="fw-bolder" id="preview_rent_change">—</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!--Financial Summary-->
-                                <div class="card border mb-6" id="preview_financial_card">
-                                    <div class="card-body py-4 px-6">
-                                        <h4 class="fw-bolder mb-4">Financial Summary</h4>
-                                        <div id="preview_financial_rows"></div>
-                                    </div>
-                                </div>
-
-                                <!--Parking Summary-->
-                                <div class="card border mb-6 d-none" id="preview_parking_card">
-                                    <div class="card-body py-4 px-6">
-                                        <h4 class="fw-bolder mb-3">Parking</h4>
-                                        <div id="preview_parking_text" class="text-muted fs-6"></div>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <div id="preview_error" class="alert alert-danger d-none">Failed to load preview. Please go back and check your inputs.</div>
-
-                        </div>
-                        <!--===== /STEP 4 =====-->
-
-                        <!--begin::Nav Buttons-->
-                        <div class="d-flex flex-stack pt-10 mt-8 border-top">
-                            <button type="button" class="btn btn-light btn-lg" id="movement_prev_btn" style="display:none!important;">
-                                <i class="fas fa-chevron-left me-2"></i>Previous
-                            </button>
-                            <div class="ms-auto d-flex gap-3">
-                                <a href="/tenant_management/movement" class="btn btn-light btn-lg">Cancel</a>
-                                <button type="button" class="btn btn-primary btn-lg" id="movement_next_btn">
-                                    Continue<i class="fas fa-chevron-right ms-2"></i>
-                                </button>
-                                <button type="button" class="btn btn-success btn-lg d-none" id="movement_submit_btn">
-                                    <i class="fas fa-check me-2"></i>Submit Transfer Request
-                                </button>
-                            </div>
-                        </div>
-                        <!--end::Nav Buttons-->
-
-                    </div>
-                    <!--end::Stepper Content-->
-
-                </div>
-                <!--end::Stepper-->
-
-            </div>
+        <div class="tenant-metrics report-metrics mb-6" style="--report-cols: 4">
+            <div><span>Current rent</span><strong>{{ money($tenancy->monthly_payment, $currency) }}</strong><small>a month, billed {{ $frequency }}</small></div>
+            <div><span>Deposit held</span><strong>{{ money($account['deposit_held'], $currency) }}</strong><small>of {{ money($tenancy->security_deposit, $currency) }} agreed</small></div>
+            <div><span>Balance</span><strong class="{{ $account['balance'] > 0 ? 'crm-figure-warn' : '' }}">{{ money(abs($account['balance']), $currency) }}</strong><small>{{ $account['balance'] > 0 ? 'owed by the tenant' : ($account['balance'] < 0 ? 'in credit' : 'nothing owed') }}@if($account['overdue'] > 0) · {{ money($account['overdue'], $currency) }} overdue @endif</small></div>
+            <div><span>Tenancy</span><strong class="transfer-ref">{{ $tenancy->tenancy_ref }}</strong><small>{{ $tenancy->status }}@if(tenancy_profile_url($tenancy)) · <a href="{{ tenancy_profile_url($tenancy) }}">open</a>@endif</small></div>
         </div>
-        <!--end::Card-->
 
+        @if($blocked)
+            <div class="alert alert-danger"><strong>This tenant cannot be transferred yet.</strong> {{ $arrears['message'] }}</div>
+        @elseif($units->isEmpty())
+            <section class="tenant-panel">
+                <div class="tenant-empty"><i class="fas fa-door-closed" aria-hidden="true"></i><h3>No free {{ $commercial ? 'commercial space' : 'units' }} at this property</h3>
+                    <p>A transfer needs a {{ $commercial ? 'commercial unit with free area' : 'vacant unit that is not reserved, under maintenance or for sale only' }}. Free one up, or check the unit's status under the property.</p></div>
+            </section>
+        @else
+        <form method="post" action="{{ route('tenant_movement.store') }}" class="transfer-layout" data-transfer-form data-preview-url="{{ route('tenant_movement.preview') }}" data-currency="{{ $currency }}" novalidate>
+            @csrf
+            <input type="hidden" name="tenancy_id" value="{{ $tenancy->id }}">
+            <div class="transfer-main">
+                <section class="tenant-panel tenant-panel--padded mb-5">
+                    <h2 class="report-section-title">1. The new unit</h2>
+                    <p class="report-section-desc">{{ $units->count() }} free {{ $commercial ? \Illuminate\Support\Str::plural('space', $units->count()) . ' with room' : \Illuminate\Support\Str::plural('unit', $units->count()) }} at this property.</p>
+                    <div class="transfer-units-grid" role="radiogroup" aria-label="New unit">
+                        @foreach($units as $unit)
+                            <label class="transfer-unit">
+                                <input type="radio" name="new_unit_id" value="{{ $unit['id'] }}" @checked((int) old('new_unit_id') === (int) $unit['id']) data-free-sqft="{{ $unit['remaining_sq_ft'] ?? '' }}" required>
+                                <span>
+                                    <strong>{{ $unit['label'] }}</strong>
+                                    <small>
+                                        @if($commercial)
+                                            {{ number_format((float) ($unit['remaining_sq_ft'] ?? 0)) }} sq ft free @if($unit['unit_sq_ft']) of {{ number_format((float) $unit['unit_sq_ft']) }} @endif
+                                            @if($unit['min_sq_ft']) · min {{ number_format((float) $unit['min_sq_ft']) }} sq ft @endif
+                                        @else
+                                            {{ collect([$unit['bedrooms'] !== null ? $unit['bedrooms'] . ' bed' : null, $unit['bathrooms'] !== null ? $unit['bathrooms'] . ' bath' : null, $unit['sq_area'] ? number_format((float) $unit['sq_area']) . ' sq ft' : null])->filter()->implode(' · ') ?: 'Vacant' }}
+                                        @endif
+                                    </small>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                </section>
+
+                <section class="tenant-panel tenant-panel--padded mb-5">
+                    <h2 class="report-section-title">2. When</h2>
+                    <div class="transfer-choice">
+                        <label><input type="radio" name="move_type" value="end_of_month" @checked(old('move_type', 'end_of_month') === 'end_of_month')>
+                            <span><strong>At the start of the next billing period, {{ $nextPeriod->format('j M Y') }}</strong><small>No proration: the current period is already billed on the old unit, and rent for the new unit starts with the next period.</small></span></label>
+                        <label><input type="radio" name="move_type" value="mid_month" @checked(old('move_type') === 'mid_month')>
+                            <span><strong>On a date I choose</strong><small>The unused days of the old rent are set against the new rent for the rest of the period: an adjustment invoice if the tenant owes, credit if they are owed.</small></span></label>
+                    </div>
+                    <div class="transfer-date" data-mid-only @if(old('move_type') !== 'mid_month') hidden @endif>
+                        <label for="tr_date" class="form-label">Move date</label>
+                        <input id="tr_date" type="date" name="transfer_date" value="{{ old('transfer_date', today()->toDateString()) }}" min="{{ today()->toDateString() }}" max="{{ today()->addYear()->toDateString() }}" class="form-control">
+                    </div>
+                </section>
+
+                <section class="tenant-panel tenant-panel--padded mb-5">
+                    <h2 class="report-section-title">3. Rent and terms in the new unit</h2>
+                    <p class="report-section-desc">Billing continues on the same cycle ({{ $frequency }}, due on day {{ $tenancy->payment_due_day ?: 1 }}), with the same late fee and grace period.</p>
+                    <div class="transfer-fields">
+                        @if($commercial)
+                            <div><label for="tr_area" class="form-label required">Area taken (sq ft)</label>
+                                <input id="tr_area" type="number" name="occupied_sq_area" step="0.01" min="0" value="{{ old('occupied_sq_area', $tenancy->occupied_sq_area) }}" class="form-control" data-calc required>
+                                <small class="form-text" data-free-note></small></div>
+                            <div><label for="tr_rate" class="form-label required">Rent per sq ft, a month</label>
+                                <input id="tr_rate" type="number" name="rate_per_sq_ft" step="0.01" min="0" value="{{ old('rate_per_sq_ft', $tenancy->rate_per_sq_ft) }}" class="form-control" data-calc required></div>
+                            <div><label for="tr_sc" class="form-label">Service charge per sq ft</label>
+                                <input id="tr_sc" type="number" name="service_charge_per_sq_ft" step="0.01" min="0" value="{{ old('service_charge_per_sq_ft', $tenancy->service_charge_per_sq_ft) }}" class="form-control">
+                                <small class="form-text">Billed separately from rent, as now.</small></div>
+                        @else
+                            <div><label for="tr_rent" class="form-label required">New rent, a month</label>
+                                <div class="input-group"><span class="input-group-text">{{ $currency }}</span><input id="tr_rent" type="number" name="new_rent" step="0.01" min="0" value="{{ old('new_rent', $tenancy->monthly_payment) }}" class="form-control" required></div></div>
+                            <div><label for="tr_furnishing" class="form-label">Furnishing</label>
+                                <select id="tr_furnishing" name="furnishing" class="form-select">
+                                    @foreach(Transfers::FURNISHING as $option)<option value="{{ $option }}" @selected(old('furnishing', $tenancy->furnishing ?: 'Unfurnished') === $option)>{{ $option }}</option>@endforeach
+                                </select></div>
+                        @endif
+                        <div><label for="tr_deposit" class="form-label required">Deposit for the new unit</label>
+                            <div class="input-group"><span class="input-group-text">{{ $currency }}</span><input id="tr_deposit" type="number" name="new_deposit" step="0.01" min="0" value="{{ old('new_deposit', $tenancy->security_deposit) }}" class="form-control" required></div>
+                            <small class="form-text">A higher deposit is billed as a top-up; a lower one is returned as credit.</small></div>
+                        <div><label for="tr_occupants" class="form-label">Occupants</label>
+                            <input id="tr_occupants" type="number" name="number_of_occupants" min="1" max="100" value="{{ old('number_of_occupants', $tenancy->number_of_occupants) }}" class="form-control"></div>
+                        <div><label for="tr_end" class="form-label">Lease ends</label>
+                            <input id="tr_end" type="date" name="lease_end_date" value="{{ old('lease_end_date', $currentLeaseEnd) }}" min="{{ today()->addDay()->toDateString() }}" class="form-control">
+                            <small class="form-text">Leave empty for a month-to-month lease.</small></div>
+                    </div>
+                    <div class="mt-4"><label for="tr_terms" class="form-label">Special terms</label>
+                        <textarea id="tr_terms" name="special_terms" rows="2" maxlength="2000" class="form-control" placeholder="Anything particular to the new unit">{{ old('special_terms', $lease?->special_terms) }}</textarea></div>
+                </section>
+
+                @if($slot)
+                    <section class="tenant-panel tenant-panel--padded mb-5">
+                        <h2 class="report-section-title">4. Parking</h2>
+                        <p class="report-section-desc">The tenant has parking slot <strong>{{ $slot->parking_number ?? '#' . $slot->id }}</strong>.</p>
+                        <div class="transfer-choice">
+                            <label><input type="radio" name="parking_action" value="keep" @checked(old('parking_action', 'keep') === 'keep')><span><strong>Keep the same slot</strong></span></label>
+                            <label><input type="radio" name="parking_action" value="release" @checked(old('parking_action') === 'release')><span><strong>Give the slot up</strong></span></label>
+                            <label><input type="radio" name="parking_action" value="replace" @checked(old('parking_action') === 'replace') @disabled(!$freeSlots)><span><strong>Move to another slot</strong>@unless($freeSlots)<small>No other slot is free.</small>@endunless</span></label>
+                        </div>
+                        @if($freeSlots)
+                            <div class="transfer-date" data-replace-only @if(old('parking_action') !== 'replace') hidden @endif>
+                                <label for="tr_slot" class="form-label">New slot</label>
+                                <select id="tr_slot" name="new_parking_slot_id" class="form-select">
+                                    @foreach($freeSlots as $free)<option value="{{ $free['id'] }}" @selected((int) old('new_parking_slot_id') === (int) $free['id'])>{{ $free['label'] }}@if($free['type']) ({{ $free['type'] }})@endif</option>@endforeach
+                                </select>
+                            </div>
+                        @endif
+                    </section>
+                @endif
+
+                <section class="tenant-panel tenant-panel--padded mb-5">
+                    <h2 class="report-section-title">{{ $slot ? 5 : 4 }}. Notes</h2>
+                    <label for="tr_notes" class="visually-hidden">Notes</label>
+                    <textarea id="tr_notes" name="notes" rows="2" maxlength="1000" class="form-control" placeholder="Why the tenant is moving, or anything the approver should know">{{ old('notes') }}</textarea>
+                    @if($arrears['type'] === 'warning')
+                        <div class="alert alert-warning mt-4 mb-0">
+                            <p class="mb-2">{{ $arrears['message'] }} The arrears stay on the tenant's account after the move.</p>
+                            <label class="form-check"><input class="form-check-input" type="checkbox" name="arrears_acknowledged" value="1" @checked(old('arrears_acknowledged'))> <span class="form-check-label">I have seen the arrears and want to request the transfer.</span></label>
+                        </div>
+                    @endif
+                </section>
+            </div>
+
+            <aside class="transfer-side">
+                <section class="tenant-panel tenant-panel--padded transfer-summary" aria-live="polite">
+                    <h2 class="report-section-title">What will happen</h2>
+                    <dl data-summary>
+                        <div><dt>Move date</dt><dd data-s="date">{{ $nextPeriod->format('j M Y') }}</dd></div>
+                        <div><dt>New rent, a month</dt><dd data-s="rent">—</dd></div>
+                        <div data-s-row="proration" hidden><dt>Rent adjustment</dt><dd data-s="proration">—</dd></div>
+                        <div><dt>Deposit</dt><dd data-s="deposit">—</dd></div>
+                    </dl>
+                    <p class="transfer-summary-note" data-s="note">On approval, the old tenancy ends and a new one starts on the move date, keeping the account, agent and billing cycle.</p>
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Request transfer</button>
+                    <a href="{{ route('tenant_movement.index') }}" class="btn btn-light w-100 mt-2">Cancel</a>
+                </section>
+            </aside>
+        </form>
+        @endif
     </div>
 </div>
-<!--end::Content-->
-
 @endsection
