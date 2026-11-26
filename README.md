@@ -4,7 +4,7 @@ Erty is property management software for landlords, agencies and property manage
 setting up a property to collecting rent: units and houses, tenancies and leases, rent and payments, agents and
 their commission, leads, maintenance, legal documents and house sales.
 
-Erty is built by [Tandish](https://tandish.com) and runs as a Laravel application on PostgreSQL.
+Erty is built by [Tandish](https://tandish.com), runs as a Laravel application on PostgreSQL, and is open source under the [MIT licence](LICENSE).
 
 ## What it does
 
@@ -96,3 +96,7 @@ decided by `config/business_access.php`: every business route must be listed the
 is missing.
 
 The database schema is in `database/migrations`, a baseline of one migration per area.
+
+## Licence
+
+Erty is open source under the [MIT licence](LICENSE). Copyright (c) 2026 Tandish Group.

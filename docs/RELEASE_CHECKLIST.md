@@ -28,7 +28,7 @@ git push -u origin main
 ```
 
 - [ ] In the new repository, check again that `git log --stat` contains a single commit and no `.env`, dump or log files.
-- [ ] Add the licence file chosen for the release (`LICENSE`), and update `README.md` with it.
+- [x] Add the licence file chosen for the release (`LICENSE`, MIT), and update `README.md` with it.
 - [ ] Rotate every credential that was ever in the old `.env` or the old dumps: mail, Paystack, M-Pesa, Youverify, the exchange-rate API key, the database, `APP_KEY`.
 
 ## 3. Keep the private repository private
