@@ -5,6 +5,7 @@ namespace App\Services\Reports;
 use App\Models\User;
 use App\Services\Reports\Reports\AgentsReport;
 use App\Services\Reports\Reports\IncomeExpensesReport;
+use App\Services\Reports\Reports\LeadsReport;
 use App\Services\Reports\Reports\LeasesReport;
 use App\Services\Reports\Reports\MaintenanceReport;
 use App\Services\Reports\Reports\OccupancyReport;
@@ -23,6 +24,7 @@ class ReportRegistry
         OccupancyReport::class,
         LeasesReport::class,
         AgentsReport::class,
+        LeadsReport::class,
         SalesReport::class,
         MaintenanceReport::class,
     ];

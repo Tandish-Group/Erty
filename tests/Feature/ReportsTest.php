@@ -46,7 +46,7 @@ class ReportsTest extends TestCase
 
     public function test_each_role_gets_the_reports_its_rights_allow(): void
     {
-        $this->assertSame(['overview', 'income', 'rent-roll', 'occupancy', 'leases', 'agents', 'sales', 'maintenance'], $this->keysFor($this->owner));
+        $this->assertSame(['overview', 'income', 'rent-roll', 'occupancy', 'leases', 'agents', 'leads', 'sales', 'maintenance'], $this->keysFor($this->owner));
 
         $finance = $this->keysFor($this->member('Finance Officer'));
         $this->assertContains('income', $finance);
@@ -148,7 +148,7 @@ class ReportsTest extends TestCase
     {
         ini_set('memory_limit', '512M'); // fifteen workbooks and PDFs in one process; a request builds one
         $this->actingAs($this->owner)->get('/reports?period=last_12_months')->assertOk()->assertSee('Properties side by side');
-        foreach (['income', 'rent-roll', 'occupancy', 'leases', 'agents', 'sales', 'maintenance'] as $key) {
+        foreach (['income', 'rent-roll', 'occupancy', 'leases', 'agents', 'leads', 'sales', 'maintenance'] as $key) {
             $this->get("/reports/{$key}?period=last_12_months")->assertOk();
             $xlsx = $this->get("/reports/{$key}?period=last_12_months&format=xlsx")->assertOk();
             $this->assertStringContainsString('spreadsheetml', (string) $xlsx->headers->get('content-type'), $key);
@@ -157,5 +157,20 @@ class ReportsTest extends TestCase
         }
         $this->get('/reports/overview?format=xlsx')->assertOk();
         $this->get('/reports/nonsense')->assertSessionHas('not_available');
+    }
+
+    public function test_crm_reports_show_the_leads_report_with_crm_access_and_download_only_with_the_right(): void
+    {
+        $owner = $this->actingAs($this->owner)->get('/customer_relationship/reports?period=last_12_months')->assertOk();
+        $owner->assertSee('Leads &amp; pipeline', false)->assertSee('Pipeline today')->assertSee('Overdue follow-ups');
+        $this->assertStringContainsString('spreadsheetml', (string) $this->get('/customer_relationship/reports?format=xlsx')->headers->get('content-type'));
+        $this->assertSame('application/pdf', $this->get('/customer_relationship/reports?format=pdf')->headers->get('content-type'));
+
+        $leasing = $this->member('Leasing / CRM Agent'); // CRM view, no Reports → Download
+        $this->actingAs($leasing)->get('/customer_relationship/reports')->assertOk()->assertDontSee('fa-file-excel', false);
+        $this->get('/customer_relationship/reports?format=xlsx')->assertForbidden();
+
+        $caretaker = $this->member('Caretaker'); // no CRM right
+        $this->actingAs($caretaker)->get('/customer_relationship/reports')->assertForbidden();
     }
 }

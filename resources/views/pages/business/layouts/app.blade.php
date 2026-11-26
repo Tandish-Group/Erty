@@ -94,7 +94,7 @@
         <link href="{{ app('asset_versioned')('css/business-dashboard.css') }}" rel="stylesheet">
         @endif
 
-        @if(request()->is('tenant_management', 'tenant_management/onboarding/tenant', 'tenant_management/movement', 'tenant_management/movement/*', 'tenant_management/payment-reconciliation*', 'agents/commissions', 'tenant_management/billing*', 'maintenance*', 'listings', 'listings/*', 'complex/*', 'platform', 'platform/*', 'my-profile', 'my-agent', 'legal', 'business/faq', 'support/tickets*', 'reports', 'reports/*', 'activity'))
+        @if(request()->is('tenant_management', 'tenant_management/onboarding/tenant', 'tenant_management/movement', 'tenant_management/movement/*', 'tenant_management/payment-reconciliation*', 'agents/commissions', 'tenant_management/billing*', 'maintenance*', 'listings', 'listings/*', 'complex/*', 'platform', 'platform/*', 'my-profile', 'my-agent', 'legal', 'business/faq', 'support/tickets*', 'reports', 'reports/*', 'customer_relationship', 'customer_relationship/reports', 'customer_relationship/document-center', 'activity'))
         <link href="{{ app('asset_versioned')('css/tenant-workspace.css') }}" rel="stylesheet">
         @endif
 
@@ -102,7 +102,7 @@
         <link href="{{ app('asset_versioned')('css/property-expenses.css') }}" rel="stylesheet">
         @endif
 
-        @if(request()->is('customer_relationship', 'agents/tasks*', 'agents/lead-tasks/*', 'customer_relationship/lead_management', 'customer_relationship/lead_management/*', 'tenant_management/tenant/*/view', 'tenant_management/tenancy/*/view', 'customer_relationship/lead_management/onboarding/lead', 'agents', 'agents/onboarding'))
+        @if(request()->is('agents/tasks*', 'agents/lead-tasks/*', 'customer_relationship/lead_management', 'customer_relationship/lead_management/*', 'tenant_management/tenant/*/view', 'tenant_management/tenancy/*/view', 'customer_relationship/lead_management/onboarding/lead', 'agents', 'agents/onboarding'))
         <link href="{{ app('asset_versioned')('css/crm-workspace.css') }}" rel="stylesheet">
         @endif
 

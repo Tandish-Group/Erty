@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
-                scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return Number(v).toLocaleString(); } } }, x: { grid: { display: false } } }
+                scales: { y: { beginAtZero: true, ticks: { precision: 0, callback: function (v) { return Number(v).toLocaleString(); } } }, x: { grid: { display: false } } }
             }
         });
     });

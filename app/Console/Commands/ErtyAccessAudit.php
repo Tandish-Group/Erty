@@ -299,7 +299,11 @@ class ErtyAccessAudit extends Command
                     $problems["\"" . mb_strimwidth($text, 0, 30, '…') . "\" → " . ($target->getName() ?: $target->uri()) . " (needs {$needs})"][] = $path;
                 } elseif ($method === 'GET' && !isset($seenRoutes[$name = $target->getName() ?: $target->uri()])) {
                     $seenRoutes[$name] = true;
-                    $queue[] = parse_url($url, PHP_URL_PATH);
+                    // Files (receipts, statements, downloads) are checked as links above but not fetched: they are
+                    // not pages, and building PDFs for every person would exhaust memory.
+                    if (!preg_match('~download|receipt|statement|export|file|pdf|print~i', $target->getActionMethod() . ' ' . $target->uri())) {
+                        $queue[] = parse_url($url, PHP_URL_PATH);
+                    }
                 }
             }
         }

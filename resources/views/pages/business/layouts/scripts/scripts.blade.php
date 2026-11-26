@@ -84,7 +84,7 @@
 @endif
 
 
-@if(request()->is('reports', 'reports/*'))
+@if(request()->is('reports', 'reports/*', 'customer_relationship/reports'))
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{{ app('asset_versioned')('js/pages/business/reports.js') }}"></script>
@@ -233,19 +233,6 @@
 
 @endif
 
-@if(request()->is('customer_relationship/document-center'))
-
-    <script src="{{ app('asset_versioned')('js/pages/business/document_center.js') }}"></script>
-
-@endif
-
-
-@if(request()->is('customer_relationship/reports') || request()->is('customer_relationship/reports/*'))
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="{{ app('asset_versioned')('js/pages/business/crm_reports.js') }}"></script>
-
-@endif
 
 @if(request()->is('business/faq'))
 

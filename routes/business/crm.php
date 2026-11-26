@@ -38,12 +38,11 @@ Route::group(['prefix' => 'customer_relationship'], function () {
 
     // Document Center
     Route::get('/document-center', [DocumentCenterController::class, 'index'])->name('document-center.index');
-    Route::get('/document-center/data', [DocumentCenterController::class, 'getDocumentsData'])->name('document-center.data');
-    Route::get('/document-center/stats', [DocumentCenterController::class, 'getStats'])->name('document-center.stats');
+    Route::get('/document-center/files/{source}/{id}/{index}', [DocumentCenterController::class, 'file'])
+        ->whereIn('source', ['tenancy', 'history', 'agent'])->whereNumber(['id', 'index'])->name('document-center.file');
 
     // Reports & Analytics
     Route::get('/reports', [CrmReportsController::class, 'index'])->name('crm.reports.index');
-    Route::get('/reports/data', [CrmReportsController::class, 'getData'])->name('crm.reports.data');
 
     // Lead Task Management Routes
     // Agent tasks moved to the Agents section (/agents/tasks).

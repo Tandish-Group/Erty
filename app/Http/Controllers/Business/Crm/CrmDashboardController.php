@@ -2,194 +2,109 @@
 
 namespace App\Http\Controllers\Business\Crm;
 
-use App\Enums\LeadTaskStatusEnum;
+use App\Enums\LeadWorkflowPhaseEnum;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\LeadTask;
+use App\Services\Crm\LeadPipeline;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * CRM home (/customer_relationship): where the pipeline stands today and what needs doing next.
+ * Every figure follows LeadPipeline (the same definitions as the Leads & pipeline report), and the Lead and
+ * LeadTask models limit it to the properties the person may see.
+ */
 class CrmDashboardController extends Controller
 {
-    /**
-     * Display the CRM dashboard with all metrics
-     */
+    private const LIST_SIZE = 6;
+
     public function index()
     {
-        $user = auth()->user();
-        
-        // Get lead statistics
-        $leadStats = $this->getLeadStatistics();
-        
-        // CRM is about leads; agents and their tasks have their own section (/agents).
-        // Get recent leads
-        $recentLeads = $this->getRecentLeads();
-        
-        // Get pipeline overview
-        $pipelineStats = $this->getPipelineStatistics();
+        $open = fn () => LeadPipeline::open();
+        $overdueTasks = fn () => LeadPipeline::tasks()->overdue();
+        $monthAgo = now()->subDays(30);
 
-        return view('pages.business.crm.index', compact(
-            'leadStats',
-            'recentLeads',
-            'pipelineStats'
-        ));
+        $converted = LeadPipeline::leads()->where('converted_at', '>=', $monthAgo);
+        $received = LeadPipeline::leads()->where('leads.created_at', '>=', $monthAgo)->count();
+
+        return view('pages.business.crm.index', [
+            'metrics' => [
+                'open' => $open()->count(),
+                'hot' => $open()->where('priority', 'hot')->count(),
+                'newWeek' => LeadPipeline::leads()->where('leads.created_at', '>=', now()->startOfWeek())->count(),
+                'received' => $received,
+                'attention' => LeadPipeline::needingAttention($open())->count(),
+                'overdue' => $overdueTasks()->count(),
+                'converted' => (clone $converted)->count(),
+                'tenants' => (clone $converted)->whereNotNull('converted_tenant_id')->count(),
+                'buyers' => (clone $converted)->whereNotNull('converted_sale_id')->count(),
+            ],
+            'phases' => $this->phases($open),
+            'attention' => $this->attention($open),
+            'overdue' => $this->overdue($overdueTasks),
+            'recent' => $open()->with(['profile', 'assignedAgent:id,first_name,last_name,company_name', 'complex:id,title'])
+                ->latest('leads.created_at')->limit(self::LIST_SIZE)->get(),
+            'sources' => LeadPipeline::leads()->where('leads.created_at', '>=', $monthAgo)->groupBy('source')
+                ->orderByDesc(DB::raw('COUNT(*)'))->get(['source', DB::raw('COUNT(*) as n')])
+                ->map(fn ($r) => ['label' => ucwords(str_replace('_', ' ', (string) $r->source ?: 'Not recorded')), 'count' => (int) $r->n]),
+            'staleDays' => LeadPipeline::STALE_DAYS,
+        ]);
     }
 
-    /**
-     * Get lead statistics
-     */
-    private function getLeadStatistics()
+    /** Open leads in each working phase, and how many have sat in it too long. */
+    private function phases(callable $open): array
     {
-        $user = auth()->user();
-        $userId = $user->businessOwnerId();
-    
-        // Manual leads (from Lead model)
-        $manualLeadsActive = Lead::forBusiness($userId)
-            ->whereIn('status', ['new', 'contacted', 'qualified', 'in_progress'])
-            ->count();
-    
-        $manualLeadsNewThisWeek = Lead::forBusiness($userId)
-            ->where('created_at', '>=', Carbon::now()->startOfWeek())
-            ->count();
-    
-        // Leads are the business's own leads; renter viewing requests were removed with the renter side.
-        return [
-            'total_active' => $manualLeadsActive,
-            'new_this_week' => $manualLeadsNewThisWeek,
-            'qualified' => Lead::forBusiness($userId)
-                ->where('status', 'qualified')
-                ->count(),
-            'conversion_rate' => $this->calculateConversionRate($userId)
+        $counts = $open()->groupBy('workflow_phase')
+            ->selectRaw('workflow_phase, COUNT(*) as n, SUM(CASE WHEN phase_started_at < ? THEN 1 ELSE 0 END) as stuck', [now()->subDays(LeadPipeline::STALE_DAYS)])
+            ->get()->keyBy('workflow_phase');
+        $about = [
+            'qualification' => 'Record the need, budget and timeline, and match the lead to a property.',
+            'engagement' => 'Calls, meetings and viewings. The lead\'s agent works the follow-up tasks.',
+            'conversion' => 'Agree the unit, rent or price and the move-in date.',
+            'finalization' => 'Paperwork and payment, then the lead becomes a tenant or buyer.',
         ];
+
+        return collect(LeadWorkflowPhaseEnum::cases())
+            ->filter(fn ($p) => isset($about[$p->value]))
+            ->values()
+            ->map(fn ($p, $i) => [
+                'step' => $i + 1,
+                'label' => $p->label(),
+                'about' => $about[$p->value],
+                'count' => (int) ($counts[$p->value]->n ?? 0),
+                'stuck' => (int) ($counts[$p->value]->stuck ?? 0),
+            ])->all();
     }
 
-    /**
-     * Calculate conversion rate
-     */
-    private function calculateConversionRate($userId)
+    /** Open leads that have gone quiet, with the reason. */
+    private function attention(callable $open)
     {
-        $totalLeads = Lead::forBusiness($userId)->count();
-        $convertedLeads = Lead::forBusiness($userId)
-            ->converted()
-            ->count();
-        
-        if ($totalLeads === 0) return 0;
-        
-        return round(($convertedLeads / $totalLeads) * 100, 1);
-    }
+        return LeadPipeline::needingAttention($open())
+            ->with(['profile', 'assignedAgent:id,first_name,last_name,company_name'])
+            ->orderByRaw('COALESCE(leads.last_contacted_at, leads.created_at)')
+            ->limit(self::LIST_SIZE)->get()
+            ->map(function (Lead $lead) {
+                $followUp = $lead->follow_up_date ? Carbon::parse($lead->follow_up_date) : null;
+                $since = $lead->last_contacted_at ? Carbon::parse($lead->last_contacted_at) : null;
+                $reason = $followUp && $followUp->lt(now()->startOfDay())
+                    ? 'Follow-up was due ' . $followUp->format('j M')
+                    : ($since ? 'Not contacted for ' . (int) $since->diffInDays(now()) . ' days' : 'Never contacted, added ' . $lead->created_at->diffForHumans());
 
-
-
-
-    /**
-     * Get recent leads for the dashboard
-     */
-    private function getRecentLeads()
-    {
-        $user = auth()->user();
-
-        return Lead::forBusiness($user->businessOwnerId())
-            ->with(['assignedAgent', 'profile', 'creator:id,first_name,last_name'])
-            ->whereIn('status', ['new', 'contacted', 'qualified'])
-            ->orderBy('created_at', 'desc')
-            ->take(4)
-            ->get()
-            ->map(function($lead) {
-                $profile = $lead->profile;
-                $name = $profile?->lead_type === 'Business'
-                    ? ($profile->company_name ?: 'Business lead')
-                    : (trim(($profile->first_name ?? '') . ' ' . ($profile->last_name ?? '')) ?: 'Lead #' . $lead->id);
-                return [
-                    'id' => $lead->id,
-                    'url' => route('lead_management.show', \Illuminate\Support\Facades\Crypt::encrypt($lead->id)),
-                    'name' => $name,
-                    'initials' => strtoupper(mb_substr($name, 0, 1)),
-                    'added_by' => $lead->creator ? trim($lead->creator->first_name . ' ' . $lead->creator->last_name) : null,
-                    'description' => $lead->property_type ? "Looking for {$lead->bedrooms}BR {$lead->property_type}" : 'No property preference set',
-                    'priority' => $lead->priority ?? 'medium',
-                    'priority_label' => $this->getPriorityLabel($lead->priority ?? 'medium'),
-                    'created_at' => $lead->created_at->diffForHumans(),
-                    'agent' => $lead->assignedAgent ? $lead->assignedAgent->full_name : 'Unassigned',
-                    'agent_url' => agent_profile_url($lead->assignedAgent)
-                ];
+                return ['lead' => $lead, 'reason' => $reason];
             });
     }
 
-    /**
-     * Get pipeline statistics
-     */
-    private function getPipelineStatistics()
+    /** Overdue follow-up tasks, oldest first. */
+    private function overdue(callable $overdueTasks)
     {
-        $user = auth()->user();
+        return $overdueTasks()->with(['lead.profile', 'assignedAgent:id,first_name,last_name,company_name'])
+            ->orderByRaw('COALESCE(lead_tasks.due_date, lead_tasks.sla_breach_at)')
+            ->limit(self::LIST_SIZE)->get()
+            ->map(function (LeadTask $task) {
+                $due = $task->due_date ?? ($task->sla_breach_at ? Carbon::parse($task->sla_breach_at) : null);
 
-        $phases = [
-            'qualification' => [
-                'label' => 'Qualification',
-                'icon' => 'rocket',
-                'color' => 'primary'
-            ],
-            'engagement' => [
-                'label' => 'Engagement',
-                'icon' => 'handshake',
-                'color' => 'warning'
-            ],
-            'conversion' => [
-                'label' => 'Conversion',
-                'icon' => 'document',
-                'color' => 'info'
-            ],
-            'finalization' => [
-                'label' => 'Finalization',
-                'icon' => 'check-circle',
-                'color' => 'success'
-            ]
-        ];
-
-        $stats = [];
-
-        foreach ($phases as $phase => $config) {
-            $leadsInPhase = Lead::forBusiness($user->businessOwnerId())
-                ->where('workflow_phase', $phase)
-                ->get();
-
-            $count = $leadsInPhase->count();
-            $totalValue = $leadsInPhase->sum(function($lead) {
-                // Estimate deal value from budget_max or average
-                return $lead->budget_max ?? ($lead->budget_min ?? 0);
+                return ['task' => $task, 'days' => $due ? max(1, (int) $due->diffInDays(now())) : null];
             });
-
-            // Calculate progress percentage (based on completed tasks)
-            $totalTasks = LeadTask::whereIn('lead_id', $leadsInPhase->pluck('id'))
-                ->where('phase', $phase)
-                ->count();
-            
-            $completedTasks = LeadTask::whereIn('lead_id', $leadsInPhase->pluck('id'))
-                ->where('phase', $phase)
-                ->where('status', LeadTaskStatusEnum::COMPLETED)
-                ->count();
-
-            $progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
-
-            $stats[$phase] = array_merge($config, [
-                'count' => $count,
-                'value' => $totalValue,
-                'progress' => $progress
-            ]);
-        }
-
-        return $stats;
-    }
-
-    /**
-     * Get priority label
-     */
-    private function getPriorityLabel($priority)
-    {
-        $labels = [
-            'low' => 'Cold',
-            'medium' => 'Warm',
-            'high' => 'Hot'
-        ];
-
-        return $labels[$priority] ?? 'Warm';
     }
 }

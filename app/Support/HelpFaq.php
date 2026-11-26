@@ -200,8 +200,11 @@ class HelpFaq
                     ['id' => 'crm-tasks', 'q' => 'How do follow-up tasks work?',
                         'a' => 'Each phase of a lead comes with follow-up tasks, each assigned to an agent with a due date. Agents work them under <strong>Agents</strong> → <strong>Tasks</strong>. '
                             . 'A task is overdue once its due date or its response deadline has passed.'],
-                    ['id' => 'crm-documents', 'q' => 'What is the Document Center?',
-                        'a' => 'One place for the documents collected while working leads, such as IDs and application papers, so they are at hand when the lead becomes a tenant.'],
+                    ['id' => 'crm-documents', 'q' => 'What is the document centre?',
+                        'a' => 'One searchable list of the files Erty keeps for your business: tenancy paperwork uploaded at onboarding, receipts attached to payments, evidence on property expenses, '
+                            . 'files on property history records, the Legal library and agent CVs. Filter by kind, property or file type, and download from the list. '
+                            . 'You see only the kinds of file your role can open in their own section, and only for the properties assigned to you. '
+                            . 'A file marked <strong>Missing from storage</strong> is recorded but its upload is gone: add it again where it was first uploaded.'],
                 ],
             ],
             [
@@ -245,7 +248,7 @@ class HelpFaq
                 'items' => [
                     ['id' => 'reports-what', 'q' => 'What reports are there?',
                         'a' => 'Open <strong>Reports</strong> in the menu. The page starts with a business overview, every property side by side, and links to the reports: '
-                            . 'Income &amp; expenses, Rent roll &amp; arrears, Occupancy &amp; vacancy, Leases &amp; notices, Agents &amp; leads, Sales and Maintenance. You see the ones your role allows.'],
+                            . 'Income &amp; expenses, Rent roll &amp; arrears, Occupancy &amp; vacancy, Leases &amp; notices, Agents &amp; leads, Leads &amp; pipeline (also under CRM → Reports), Sales and Maintenance. You see the ones your role allows.'],
                     ['id' => 'reports-access', 'q' => 'Who can open which report?',
                         'a' => 'Each role has a <strong>Reports</strong> group in Team &amp; roles: Overview, Money (income and rent roll), Occupancy &amp; leases, Agents &amp; leads, Sales, Maintenance, and Download for Excel and PDF. '
                             . 'Give a role only the reports it needs.'],

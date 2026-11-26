@@ -35,10 +35,10 @@ return [
     'crm_management' => [
         'group' => 'crm_management',
         'display_name' => 'CRM overview & documents',
-        'description' => 'The CRM page, CRM reports and the Document Center.',
+        'description' => 'The CRM page, CRM reports and the document centre.',
         'permissions' => ['view'],
         'help' => [
-            'view' => 'Open CRM in the menu: the lead pipeline overview, CRM reports and the Document Center.',
+            'view' => 'Open CRM in the menu: the pipeline and follow-ups overview, CRM reports and the document centre. The document centre lists only the kinds of file the role can open in their own section (tenancy files need Tenants, receipts need Tenants → Payments, expense evidence needs Expenses, property history needs History, legal documents need Legal, CVs need Agents).',
         ],
     ],
 
@@ -151,7 +151,7 @@ return [
             'view' => 'Business overview: every property side by side.',
             'financial' => 'Money reports: income & expenses and the rent roll & arrears.',
             'occupancy' => 'Occupancy & vacancy, and leases & notices.',
-            'agents' => 'Agents & leads: leads, conversions, tasks and commission per agent.',
+            'agents' => 'Agents & leads: leads, conversions, tasks and commission per agent, and the Leads & pipeline report (sources, phases, overdue follow-ups).',
             'sales' => 'Sales: value, collections, balances and instalments.',
             'maintenance' => 'Maintenance: repairs, time to close and repair costs.',
             'export' => 'Download the reports the person can open, as Excel or PDF.',
@@ -160,7 +160,7 @@ return [
             'view' => 'Overview',
             'financial' => 'Money (income, rent roll)',
             'occupancy' => 'Occupancy & leases',
-            'agents' => 'Agents & leads',
+            'agents' => 'Agents, leads & pipeline',
             'sales' => 'Sales',
             'maintenance' => 'Maintenance',
             'export' => 'Download',
