@@ -1,0 +1,136 @@
+
+.select2-results__group {
+    padding: 1em !important;
+    background-color: #c5bebe;
+}
+
+body::-webkit-scrollbar {
+    width: .5em;
+}
+    
+body::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px #F3F6F9;
+}
+    
+body::-webkit-scrollbar-thumb {
+    background-color: darkgrey;
+    outline: 1px solid #fff;
+}
+
+.iti {
+    display: block !important;
+    width: 100% !important;
+}
+
+.iti input {
+    width: 100% !important;
+}
+
+identicon-svg {
+    width: 50px;
+    height: 50px;
+    /*background-color: #EEF;*/
+    display: inline-block;
+    margin: 5px;
+}
+
+table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    content: "+" !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: #009ef7 !important;
+    display: inline-block !important;
+    text-align: left !important;
+    line-height: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Style for expanded state (minus sign) */
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control:before {
+    content: "−" !important;
+    color: #50cd89 !important;
+}
+
+/* Hover effects */
+table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:hover:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:hover:before {
+    color: #0095e8 !important;
+    transform: scale(1.1) !important;
+    transition: all 0.2s ease !important;
+}
+
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control:hover:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control:hover:before {
+    color: #47be7d !important;
+    transform: scale(1.1) !important;
+}
+
+/* Center the control in the cell */
+.dtr-control {
+    text-align: left !important;
+    vertical-align: middle !important;
+    cursor: pointer !important;
+    padding: 8px !important;
+}
+/* Primary navigation rail remains after removing the secondary listings pane. */
+@media (min-width: 992px) {
+    body.aside-fixed:not(.aside-secondary-enabled) #kt_wrapper {
+        padding-left: 100px;
+        min-width: 0;
+    }
+    body.aside-fixed:not(.aside-secondary-enabled).header-fixed #kt_header {
+        left: 100px;
+    }
+    body.aside-fixed:not(.aside-secondary-enabled) #kt_header:not(.header-fixed) {
+        position: relative;
+        left: auto;
+    }
+}
+
+/* Navigation labels: a small caption under each icon on the desktop rail, and a full menu row (icon then
+   label) in the mobile drawer, so the drawer is filled instead of showing a narrow column of bare icons. */
+.aside-nav-label {
+    display: block;
+    text-align: center;
+    font-size: 9px;
+    line-height: 1.2;
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+}
+@media (max-width: 991.98px) {
+    #kt_aside .aside-primary,
+    #kt_aside .aside-nav {
+        width: 100% !important;
+        align-items: stretch !important;
+    }
+    #kt_aside .aside-nav > div { padding: 0 12px; margin-bottom: 0 !important; }
+    #kt_aside .aside-nav .nav-item { margin-bottom: 4px !important; }
+    #kt_aside .aside-nav .nav-link {
+        width: 100% !important;
+        height: auto !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        gap: 14px;
+        padding: 10px 14px !important;
+        border-radius: 8px;
+    }
+    #kt_aside .aside-nav .nav-link .svg-icon svg { width: 22px !important; height: 22px !important; }
+    #kt_aside .aside-nav-label {
+        margin-top: 0;
+        font-size: 14px;
+        letter-spacing: 0;
+        text-align: left;
+        color: #3f4254;
+    }
+    #kt_aside .aside-nav .nav-link.active .aside-nav-label { color: inherit; }
+    #kt_aside .aside-footer { align-items: flex-start !important; padding: 0 26px; }
+}

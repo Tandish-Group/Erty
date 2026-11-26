@@ -1,0 +1,120 @@
+/* Team & roles: header, figures, toolbar, member table and role cards. */
+.team-page { --tm-line: #dde6eb; --tm-soft: #f6f9fa; --tm-ink: #1f3644; --tm-muted: #6b7f8a; --tm-accent: #0f8b8d; }
+@media (min-width: 992px) {
+    body:has(.team-page) #kt_header .container-xxl, #kt_content_container.team-page { padding-left: 32px; padding-right: 32px; }
+}
+.team-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 24px; margin: 4px 0 20px; }
+.team-head h1 { color: var(--tm-ink); font-size: 26px; font-weight: 700; margin: 6px 0 6px; }
+.team-head p { color: var(--tm-muted); font-size: 13px; max-width: 720px; margin: 0; }
+.team-back { color: var(--tm-muted); font-size: 12px; font-weight: 600; }
+.team-back:hover { color: var(--tm-accent); }
+
+.team-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #fff; border: 1px solid var(--tm-line); border-radius: 12px; margin-bottom: 22px; }
+.team-stats > div { padding: 16px 20px; border-right: 1px solid var(--tm-line); min-width: 0; }
+.team-stats > div:last-child { border-right: 0; }
+.team-stats span { display: block; color: var(--tm-muted); font-size: 12px; }
+.team-stats strong { display: block; color: var(--tm-ink); font-size: 24px; font-weight: 650; line-height: 1.3; margin-top: 2px; }
+.team-stats small { display: block; color: #8fa1ab; font-size: 11px; }
+.team-stats .is-warn strong { color: #a36a00; }
+.team-stats .is-bad strong { color: #b03b3b; }
+
+.team-tabs { gap: 26px; border-bottom: 1px solid var(--tm-line); margin-bottom: 18px; flex-wrap: nowrap; overflow-x: auto; }
+.team-tabs .nav-link { padding: 10px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--tm-muted); font-weight: 600; background: none; white-space: nowrap; }
+.team-tabs .nav-link.active { color: var(--tm-accent); border-bottom-color: var(--tm-accent); }
+.team-tabs .count { display: inline-block; margin-left: 6px; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--tm-soft); color: var(--tm-muted); font-size: 11px; text-align: center; }
+
+.team-panel { background: #fff; border: 1px solid var(--tm-line); border-radius: 12px; overflow: hidden; }
+.team-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--tm-line); background: #fbfcfd; }
+.team-search { position: relative; flex: 1 1 260px; max-width: 380px; }
+.team-search i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #8fa1ab; font-size: 13px; }
+.team-search input { padding-left: 32px; }
+.team-toolbar .form-select { width: auto; min-width: 160px; }
+.team-count { margin-left: auto; color: var(--tm-muted); font-size: 12px; }
+
+.team-table thead th { color: var(--tm-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 12px 18px; border-bottom: 1px solid var(--tm-line); white-space: nowrap; }
+.team-table tbody td { padding: 14px 18px; border-bottom: 1px solid #eef3f5; vertical-align: middle; }
+.team-table tbody tr:last-child td { border-bottom: 0; }
+.team-table tbody tr:hover { background: #fafcfc; }
+.team-person { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.team-avatar { flex: 0 0 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: #e9f5f6; color: var(--tm-accent); }
+.team-avatar.is-dark { background: #e8ecef; color: #33464f; }
+.team-avatar.is-success { background: #eaf7f1; color: #23704b; }
+.team-avatar.is-warning { background: #fff6e5; color: #8a5a00; }
+.team-avatar.is-danger { background: #fdeef1; color: #b3304a; }
+.team-avatar.is-primary { background: #e7f2fb; color: #1d5f93; }
+.team-name { color: var(--tm-ink); font-weight: 600; font-size: 14px; }
+.team-email { color: var(--tm-muted); font-size: 12px; }
+.team-you { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--tm-soft); color: var(--tm-muted); font-size: 10px; font-weight: 600; vertical-align: middle; }
+.team-dept { color: #8fa1ab; font-size: 11px; margin-bottom: 3px; }
+.team-role { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; background: var(--tm-soft); color: #33464f; }
+.team-role.is-info { background: #e9f5f6; color: #0f7f84; }
+.team-role.is-primary { background: #e7f2fb; color: #1d5f93; }
+.team-role.is-success { background: #eaf7f1; color: #23704b; }
+.team-role.is-warning { background: #fff6e5; color: #8a5a00; }
+.team-role.is-danger { background: #fdeef1; color: #b3304a; }
+.team-role.is-dark { background: #e8ecef; color: #33464f; }
+.team-tag { display: inline-block; margin-left: 4px; border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 600; border: 1px solid var(--tm-line); color: var(--tm-muted); vertical-align: middle; }
+.team-tag.is-agent { border-color: #d3e3f2; color: #2f6390; background: #eef4fb; }
+.team-access { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--tm-ink); }
+.team-access .is-units { color: #2f6390; }
+.team-access .team-more, .team-muted { color: var(--tm-muted); font-size: 12px; }
+.team-access-all { color: var(--tm-muted); font-size: 12px; }
+.team-access-none { color: #a36a00; font-size: 12px; font-weight: 600; }
+.team-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.team-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.team-status.is-success { color: #23704b; }
+.team-status.is-warning { color: #a36a00; }
+.team-status.is-danger { color: #b03b3b; }
+.team-empty td { text-align: center; color: var(--tm-muted); padding: 32px 18px !important; }
+
+/* Role cards */
+.team-page [data-role-card] { border: 1px solid var(--tm-line) !important; border-radius: 12px; box-shadow: none !important; }
+.team-page [data-role-department] > h2 { color: var(--tm-muted) !important; }
+
+@media (max-width: 991px) {
+    .team-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .team-stats > div { border-bottom: 1px solid var(--tm-line); }
+    .team-stats > div:nth-child(2n) { border-right: 0; }
+    .team-count { margin-left: 0; width: 100%; }
+}
+/* Keep absolutely positioned labels (visually-hidden) inside the scrolling table on small screens. */
+.team-panel .table-responsive { position: relative; }
+/* Inactive roles: a clear label, and the card stepped back. */
+.team-page [data-role-card] .badge-light-secondary { background: #eef1f3 !important; color: #4e606a !important; font-weight: 600; }
+.team-page [data-role-card]:has(.badge-light-secondary) { background: #fafbfc; }
+.team-page [data-role-card]:has(.badge-light-secondary) .card-body > :not(:last-child) { opacity: .75; }
+
+/* Metronic removes padding from the first and last cells of tables: keep the team table off the card's edges. */
+.team-panel .team-table > :not(caption) > tr > th,
+.team-panel .team-table > :not(caption) > tr > td { padding-left: 18px; padding-right: 18px; }
+.team-panel .team-table > :not(caption) > tr > :first-child { padding-left: 22px !important; }
+.team-panel .team-table > :not(caption) > tr > :last-child { padding-right: 22px !important; }
+.team-panel .team-table td.text-end .btn + .dropdown { margin-left: 6px; }
+.team-panel .team-table .btn-light { color: #33464f; }
+.team-panel .team-table .btn-light:hover { color: var(--tm-accent); }
+
+/* Permission editor: sections follow the left menu; every tick box says what it allows */
+.perm-preview { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; margin-bottom: 12px; border-radius: 10px; background: #eaf5f4; color: #1f4c51; font-size: 13px; }
+.perm-preview > i { margin-top: 3px; color: #087d84; }
+.perm-preview small { display: block; color: #4d6e72; font-size: 11.5px; margin-top: 2px; }
+.perm-matrix { border: 1px solid #e3eaee; border-radius: 10px; }
+.perm-section + .perm-section { border-top: 1px solid #e3eaee; }
+.perm-section > header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f6f9fa; border-bottom: 1px solid #eef2f4; }
+.perm-section > header i { width: 18px; text-align: center; color: #087d84; }
+.perm-section > header strong { color: #243b49; font-size: 14px; }
+.perm-section > header small { color: #7b8f9b; font-size: 11.5px; }
+.perm-menu-badge { margin-left: auto; padding: 2px 9px; border-radius: 999px; background: #eef2f4; color: #6a7d89; font-size: 11px; font-weight: 600; }
+.perm-section.is-in-menu .perm-menu-badge { background: #e2f4ea; color: #247a52; }
+.perm-group { padding: 10px 14px 12px 42px; }
+.perm-group + .perm-group { border-top: 1px dashed #edf1f3; }
+.perm-group-head span { font-weight: 600; color: #2b4352; font-size: 13px; }
+.perm-group-head small { display: block; color: #7b8f9b; font-size: 11.5px; margin-bottom: 8px; }
+.perm-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 18px; }
+.perm-action { display: flex; gap: 9px; align-items: flex-start; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+.perm-action:hover { background: #f6f9fa; }
+.perm-action input { margin-top: 2px; flex-shrink: 0; }
+.perm-action strong { display: block; font-size: 12.5px; color: #2b4352; }
+.perm-action small { display: block; font-size: 11.5px; color: #6a7d89; line-height: 1.45; }
+.perm-action.is-denied { opacity: .55; cursor: not-allowed; }
+.perm-action em { font-style: normal; color: #b7621b; }
+@media (max-width: 575px) { .perm-group { padding-left: 14px; } }

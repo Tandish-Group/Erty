@@ -1,0 +1,40 @@
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+vendor/laravel/
+.env
+.env.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+*.log
+/storage/framework/*
+!/storage/framework/cache/
+!/storage/framework/cache/.gitignore
+!/storage/framework/sessions/
+!/storage/framework/sessions/.gitignore
+!/storage/framework/testing/
+!/storage/framework/testing/.gitignore
+!/storage/framework/views/
+!/storage/framework/views/.gitignore
+.nvmrc
+/storage/app/bulk_uploads
+
+# Playwright MCP browser session output
+/.playwright-mcp/
+
+# Local-only files: database dumps, macOS metadata, editor workspaces
+/backup/
+.DS_Store
+*.code-workspace
+
+# Never commit data, dumps or internal notes
+/database/backups/
+*.dump
+*.sql.gz
+/storage/app/*.zip
+/docs/internal/

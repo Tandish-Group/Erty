@@ -1,0 +1,7 @@
+@extends('pages.business.layouts.app')
+@section('content')
+<div id="kt_header" class="header"><div class="container-xxl d-flex align-items-center justify-content-between" id="kt_header_container"><div class="d-flex align-items-center gap-3"><button type="button" class="btn btn-icon d-lg-none" id="kt_aside_toggle" aria-label="Open menu">☰</button><nav class="property-breadcrumb" aria-label="Breadcrumb"><a href="{{ route('complex.show', $complex->slug) }}#amenities">← {{ $complex->title }} · Facilities</a></nav></div>@include('pages.business.include.topbar.index')</div></div>
+<div class="content d-flex flex-column flex-column-fluid" id="kt_content"><div class="container-xxl property-workspace" id="kt_content_container">
+    <div class="facility-create-layout"><div class="facility-create-intro"><span class="property-kind">Property facilities</span><h1>Add a facility</h1><p>Record a shared space, utility or service available at {{ $complex->title }}.</p><div class="facility-create-guidance"><h2>Keep it useful</h2><p>Choose the facility, add the details you know, then optionally record its annual cost.</p><p>Parking labels create individual spaces for tenant assignment. Use a separate record for each distinct facility or service.</p></div></div><section class="property-panel facility-form-shell" aria-label="Add facility">@include('pages.business.complex.partials.facility-form')</section></div>
+</div></div>
+@endsection
